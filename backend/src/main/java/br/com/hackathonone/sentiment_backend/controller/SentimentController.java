@@ -6,10 +6,13 @@ import br.com.hackathonone.sentiment_backend.service.SentimentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/sentiment")
+@RequestMapping("/api/sentiments")
 @RequiredArgsConstructor
 public class SentimentController {
 
@@ -17,7 +20,8 @@ public class SentimentController {
 
     @PostMapping
     public ResponseEntity<SentimentResponse> analyze(@RequestBody @Valid SentimentRequest request) {
-        SentimentResponse response = service.analyzeSentiment(request);
+        // Correção: O nome do método no Service é "analisarSentimento"
+        SentimentResponse response = service.analisarSentimento(request);
         return ResponseEntity.ok(response);
     }
 }

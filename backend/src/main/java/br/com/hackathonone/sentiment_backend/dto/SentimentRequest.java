@@ -1,13 +1,15 @@
 package br.com.hackathonone.sentiment_backend.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class SentimentRequest {
-
-    @NotBlank(message = "O campo 'text' é obrigatório.")
-    @Size(min = 3, message = "O texto deve ter no mínimo 3 caracteres.")
-    private String text;
+    // Precisamos que o nome seja "texto" para o Service funcionar
+    private String texto;
 }

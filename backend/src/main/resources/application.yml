@@ -1,5 +1,32 @@
 server:
   port: 8080
 
+spring:
+  application:
+    name: sentiment-backend
+
+  # Configuração do Banco de Dados H2
+  datasource:
+    url: jdbc:h2:mem:sentimentdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+
+  # Console do H2
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # JPA / Hibernate
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+# --- A CORREÇÃO ESTÁ AQUI EMBAIXO ---
+# Antes estava "ds-api", agora mudamos para "ds" e "base-url"
+# para combinar com o que o Java está pedindo no erro.
 ds:
-  base-url: http://localhost:8000
+  base-url: http://127.0.0.1:5000

@@ -7,9 +7,10 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class SentimentResponse {
-    private String previsao;      // Mapeado de 'label'
-    private Double probabilidade; // Mapeado de 'probability'
+    private String textoOriginal;
+    private String sentimento;
+    private Double probabilidade;
 }

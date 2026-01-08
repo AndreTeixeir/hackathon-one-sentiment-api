@@ -1,30 +1,41 @@
-import os
+from fastapi import FastAPI
+from pydantic import BaseModel
+from textblob import TextBlob
+import uvicorn
 
-from fastapi import FastAPI, HTTPException
-from .schemas import PredictRequest, PredictResponse
-from .model import SentimentModel
+app = FastAPI(title="Hackathon Sentiment API (Modo Teste)")
 
-app = FastAPI(title="ds-service", version="0.1.0")
+# 1. O que o Java vai mandar (JSON com "text")
+# Nota: O Java manda "text", então aqui tem que ser "text"
+class SentimentRequest(BaseModel):
+    text: str
 
-MODEL_PATH = os.getenv("MODEL_PATH", "models/sentiment.joblib")
-model = SentimentModel(model_path=MODEL_PATH)
+# 2. O que o Java espera receber (JSON com "prediction" e "probability")
+class SentimentResponse(BaseModel):
+    prediction: str
+    probability: float
 
+@app.post("/predict", response_model=SentimentResponse)
+def predict(req: SentimentRequest):
+    # Lógica simples (Estepe) usando TextBlob
+    # Isso substitui o arquivo .joblib por enquanto
+    analise = TextBlob(req.text)
+    polaridade = analise.sentiment.polarity  # Vai de -1 a +1
 
-@app.on_event("startup")
-def on_startup() -> None:
-    model.load()
+    # Regra de Classificação
+    if polaridade > 0:
+        sentimento = "Positivo"
+    elif polaridade < 0:
+        sentimento = "Negativo"
+    else:
+        sentimento = "Neutro"
 
+    # Retorno exato que o Java espera
+    return {
+        "prediction": sentimento,
+        "probability": abs(polaridade)
+    }
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-
-@app.post("/predict", response_model=PredictResponse)
-def predict(req: PredictRequest):
-    text = (req.text or "").strip()
-    if len(text) < 3:
-        raise HTTPException(status_code=400, detail="Campo 'text' deve ter pelo menos 3 caracteres.")
-
-    result = model.predict(text)
-    return PredictResponse(label=result.label, probability=result.probability)
+if __name__ == "__main__":
+    # Roda o servidor na porta 5000
+    uvicorn.run(app, host="0.0.0.0", port=5000)

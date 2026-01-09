@@ -1,0 +1,37 @@
+@startuml
+title Diagrama de Sequência - Vendedor recebe e gerencia notificações
+
+actor "Cliente - Vendedor" as Vendedor
+participant "UI Web\n(Vendedor)" as UIv
+participant "API Java\n(Spring Boot)" as API
+database "PostgreSQL\n(sentimentdb)" as DB
+
+Vendedor -> UIv : Acessa painel do vendedor\n(vendedor.html)
+
+' Carrega estatísticas
+UIv -> API : GET /api/v1/stats?vendedorId=...
+API -> DB : Log: dashboard acessado
+API -> DB : Buscar produtos do vendedor
+API -> DB : Buscar comentários dos produtos
+API -> DB : Buscar resultados de análise
+API --> UIv : JSON com estatísticas\n(% positivos/negativos/neutros,\nqtd. de críticos, etc.)
+
+' Carrega comentários
+UIv -> API : GET /api/v1/comments?vendedorId=...
+API -> DB : Buscar comentários + resultados\npara esse vendedor
+API --> UIv : Lista de comentários\ncom sentimento e probabilidade
+
+' Carrega notificações
+UIv -> API : GET /api/v1/notificacoes?vendedorId=...
+API -> DB : Buscar notificações do vendedor
+API --> UIv : Lista de notificações\n(status, mensagem, datas)
+
+' Vendedor marca notificação como lida
+Vendedor -> UIv : Clica em "Marcar como lida"
+UIv -> API : PATCH /api/v1/notificacoes/{id}/ler
+API -> DB : Atualizar NOTIFICACAO\nstatus = LIDA, data_envio = agora
+API -> DB : Log: notificação marcada como lida
+API --> UIv : 200 OK
+UIv -> Vendedor : Atualiza UI\n(remove badge de não lida)
+
+@enduml

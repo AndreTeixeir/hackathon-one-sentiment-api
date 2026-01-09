@@ -1,0 +1,62 @@
+@startuml
+title Diagrama de Sequência - Vendedor publica produto e comprador avalia
+
+actor "Cliente - Vendedor" as Vendedor
+actor "Cliente - Comprador" as Comprador
+participant "UI Web\n(Vendedor)" as UIv
+participant "UI Web\n(Comprador)" as UIc
+participant "API Java\n(Spring Boot)" as API
+database "PostgreSQL\n(sentimentdb)" as DB
+
+Vendedor -> UIv : Acessa tela Meus Produtos
+UIv -> API : GET /api/v1/produtos?vendedorId=...
+API -> DB : Buscar produtos do vendedor
+API --> UIv : Lista de produtos
+
+Vendedor -> UIv : Preenche formulario\nNovo Produto e envia
+UIv -> API : POST /api/v1/produtos\n(dados do produto)
+API -> API : Validar dados do produto
+alt Produto invalido
+  API -> DB : Registrar log de produto invalido
+  API --> UIv : 400 erro de validacao
+else Produto valido
+  API -> DB : INSERT em PRODUTO
+  API -> DB : Registrar log de produto criado
+  API --> UIv : 201 produto criado
+end
+
+== Fluxo do comprador com o produto ==
+
+Comprador -> UIc : Acessa lista de produtos
+UIc -> API : GET /api/v1/produtos
+API -> DB : Buscar produtos disponiveis
+API --> UIc : Lista de produtos
+
+Comprador -> UIc : Abre detalhes de um produto
+UIc -> API : GET /api/v1/produtos/detalhe?id=...
+API -> DB : Buscar dados do produto
+API --> UIc : Dados do produto
+
+note over Comprador, UIc
+  O processo completo de compra pode
+  ser implementado em outro fluxo.
+  Aqui focamos na avaliacao do produto
+  apos a compra.
+end note
+
+Comprador -> UIc : Escreve comentario e nota
+UIc -> API : POST /api/v1/comentarios\n(dados do comentario)
+API -> API : Validar dados do comentario
+alt Comentario invalido
+  API -> DB : Registrar log de comentario invalido
+  API --> UIc : 400 erro de validacao
+else Comentario valido
+  API -> DB : INSERT em COMENTARIO
+  API -> DB : Registrar log de comentario salvo
+
+  API -> API : Disparar fluxo interno\n de analise de sentimento\n(ver diagrama especifico)
+  API --> UIc : 201 Comentario registrado
+  UIc -> Comprador : Exibe mensagem\n"Comentario recebido com sucesso"
+end
+
+@enduml

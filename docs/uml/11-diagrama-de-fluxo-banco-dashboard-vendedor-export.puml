@@ -1,0 +1,58 @@
+@startuml
+title Fluxo de dados no banco - Dashboard do Vendedor, leitura de notificações e exportação
+
+|UI (Frontend - Vendedor)|
+start
+:Vendedor acessa painel\n(vendedor.html);
+
+:GET /api/v1/stats?vendedorId=...;
+:GET /api/v1/comments?vendedorId=...;
+:GET /api/v1/notificacoes?vendedorId=...;
+
+|API Java (Spring Boot)|
+:INSERT em LOG_EVENTO\n(nivel='INFO', origem='API',\nmensagem='Dashboard acessado',\ncliente_id=vendedorId);
+
+:SELECT * FROM PRODUTO\nWHERE cliente_vendedor_id = :vendedorId;
+
+:SELECT * FROM COMENTARIO\nWHERE produto_id IN (produtos do vendedor);
+
+:SELECT * FROM RESULTADO_ANALISE\nWHERE comentario_id IN (comentarios do vendedor);
+
+:SELECT * FROM NOTIFICACAO\nWHERE vendedor_id = :vendedorId;
+
+:Calcular agregados de sentimento\n(positivos, negativos, neutros)\nem memória ou via SQL;
+
+:Montar JSON de resposta\n(stats + lista de comentários\n+ lista de notificações);
+
+|UI (Frontend - Vendedor)|
+:Renderizar gráficos/cards de stats;\nRenderizar lista de comentários;\nRenderizar notificações pendentes;
+
+if (Vendedor clica em\n"Marcar como lida") then (sim)
+  :Chamar API\nPATCH /api/v1/notificacoes/{id}/ler;
+
+  |API Java (Spring Boot)|
+  :UPDATE NOTIFICACAO\nSET status = 'LIDA'\nWHERE id = :id;
+
+  :INSERT em LOG_EVENTO\n(nivel='INFO', origem='API',\nmensagem='Notificação marcada como lida',\ncliente_id=vendedorId, detalhe_json={id});
+
+  |UI (Frontend - Vendedor)|
+  :Atualizar UI removendo destaque\nda notificação lida;
+endif
+
+if (Vendedor clica em\n"Exportar JSON") then (sim)
+  |UI (Frontend - Vendedor)|
+  :GET /api/v1/export?vendedorId=...;
+
+  |API Java (Spring Boot)|
+  :SELECT detalhado com JOIN\nCLIENTE (comprador), PRODUTO,\nCOMENTARIO, RESULTADO_ANALISE\nfiltrando por vendedor;
+
+  :INSERT em LOG_EVENTO\n(nivel='INFO', origem='API',\nmensagem='Export JSON gerado',\ncliente_id=vendedorId);
+
+  :Retornar arquivo JSON\n(p/ download no navegador);
+
+  |UI (Frontend - Vendedor)|
+  :Iniciar download do arquivo .json;
+endif
+
+stop
+@enduml

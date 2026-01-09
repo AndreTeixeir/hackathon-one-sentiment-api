@@ -1,0 +1,32 @@
+@startuml
+title Diagrama de Sequência - Vendedor visualiza dashboard de sentimentos
+
+actor "Cliente - Vendedor" as Vendedor
+participant "UI Web\n(Vendedor)" as UIv
+participant "API Java\n(Spring Boot)" as API
+database "PostgreSQL\n(sentimentdb)" as DB
+
+Vendedor -> UIv : Acessa pagina Dashboard
+
+' Carrega estatisticas gerais
+UIv -> API : GET /api/v1/stats?vendedorId=...
+API -> DB : Buscar produtos do vendedor
+API -> DB : Buscar comentarios dos produtos
+API -> DB : Buscar resultados de analise
+API -> DB : Buscar perfis de clientes\n(idade, sexo, quantidade de compras)
+API -> API : Calcular indicadores agregados\npor sentimento, nota e perfil
+API --> UIv : JSON com estatisticas\npara cards e graficos
+
+' Carrega lista detalhada de comentarios
+UIv -> API : GET /api/v1/comments?vendedorId=...
+API -> DB : Buscar comentarios + resultados\n+ dados basicos de cliente\npara esse vendedor
+API --> UIv : Lista detalhada\n(comentario, nota, sentimento,\nprobabilidade, perfil do cliente)
+
+' Carrega notificacoes relacionadas
+UIv -> API : GET /api/v1/notificacoes?vendedorId=...
+API -> DB : Buscar notificacoes do vendedor
+API --> UIv : Lista de notificacoes\n(pendentes e lidas)
+
+UIv -> Vendedor : Renderiza dashboard completo\ncards, graficos, tabela de comentarios\ne lista de notificacoes
+
+@enduml

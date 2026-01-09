@@ -1,0 +1,127 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+
+actor Comprador
+actor Vendedor
+actor "Cliente (Empresa)" as ClienteEmpresa
+
+' ============================
+' Equipes / Módulos
+' ============================
+package "Equipe Frontend\n(/frontend)" as SquadFE {
+  [UI Web\n(login, comprador, vendedor)\nHTML/CSS/JS] as UI
+}
+
+package "Equipe Backend\n(/backend)" as SquadBE {
+  [API Java\nSpring Boot\n(/api/v1/...)] as API
+  database "PostgreSQL\n(schema-postgres.sql)" as DB
+  [Dashboard\n(endpoints /stats, /comments,\n/export)] as DASH
+  [Módulo Notificações\n(queries em notificacao)] as NOTIF
+}
+
+package "Equipe Data Science\n(/datascience)" as SquadDS {
+  [Notebooks DS\n(Jupyter / Colab)] as NB
+  [Microserviço ML\nFastAPI /predict] as ML
+  [Modelo .pkl\nTF-IDF + LogReg] as MODEL
+}
+
+' ============================
+' Contratos / Documentação
+' ============================
+package "Contratos de Integração\n(/docs, /ddl)" as Contratos {
+  [UI ↔ API\n(frontend.md)\nJSON: /api/v1/...] as C_UI_API
+  [API ↔ ML\n(README-backend.md)\nJSON: /predict] as C_API_ML
+  [API ↔ DB\n(database.md,\nschema-postgres.sql)] as C_API_DB
+}
+
+' ============================
+' Relações entre atores e UI
+' ============================
+ClienteEmpresa -down- Comprador
+ClienteEmpresa -down- Vendedor
+
+Comprador --> UI : Usa\n(avalia produtos)
+Vendedor  --> UI : Usa\n(dashboard,\nnotificações,\nexporta JSON)
+
+' ============================
+' Fluxos principais em produção
+' ============================
+
+UI --> API : HTTP JSON\n/ api/v1/comentarios\n/ api/v1/sentiment\n/ api/v1/produtos\n/ api/v1/stats\n/ api/v1/comments\n/ api/v1/notificacoes\n/ api/v1/notificacoes/{id}/ler\n/ api/v1/export
+
+API --> ML : HTTP JSON\nPOST /predict
+ML  --> MODEL : Carrega modelo\n(.pkl)
+API --> DB   : JDBC / JPA\nCRUD tabelas
+
+API --> DASH : Monta respostas\npara /stats e /comments
+API --> NOTIF : Cria/atualiza\nNOTIFICACAO\n(com status PENDENTE/LIDA)
+
+NB --> MODEL : Treina\n& exporta .pkl
+NB --> DB : Popula DATASET_REGISTRO\n(se desejado)
+
+' ============================
+' Amarração via contratos
+' ============================
+UI  -- C_UI_API
+API -- C_UI_API
+
+API -- C_API_ML
+ML  -- C_API_ML
+
+API -- C_API_DB
+DB  -- C_API_DB
+
+' ============================
+' Notas de responsabilidade
+' ============================
+note bottom of SquadFE
+  Responsável:
+  - Páginas: login, comprador, vendedor
+  - Chamar a API:
+      /api/v1/produtos
+      /api/v1/comentarios ou /sentiment
+      /api/v1/stats, /comments, /export
+      /api/v1/notificacoes, /notificacoes/{id}/ler
+  - Ler resposta JSON e montar UI
+  - Usar API_BASE_URL em config.js
+end note
+
+note bottom of SquadBE
+  Responsável:
+  - Implementar endpoints REST
+  - Aplicar regras de negócio
+  - Mapear schema-postgres.sql
+    para entidades JPA
+  - Integrar com ML (/predict)
+  - Popular tabelas:
+    cliente, produto,
+    comentario, resultado_analise,
+    notificacao, log_evento,
+    dataset_registro, modelo_ml
+end note
+
+note bottom of SquadDS
+  Responsável:
+  - Coletar dataset
+  - EDA e treino (notebooks)
+  - Exportar modelo .pkl
+  - Expor /predict no FastAPI
+  - Documentar contrato JSON
+end note
+
+note right of Contratos
+  Cada contrato define:
+  - caminhos dos endpoints
+  - formato JSON de entrada/saída
+  - códigos HTTP esperados
+  - exemplos de request/response
+
+  Esses contratos permitem que
+  as equipes trabalhem em paralelo
+  sem depender do código da outra,
+  apenas da interface combinada.
+end note
+
+@enduml

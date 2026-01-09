@@ -1,4 +1,4 @@
-package br.com.hackathonone.sentiment_backend.dto;
+package br.com.hackathonone.sentiment_backend.dto.api;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

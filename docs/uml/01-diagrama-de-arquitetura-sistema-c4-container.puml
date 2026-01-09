@@ -1,0 +1,49 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor Comprador
+actor Vendedor
+
+package "Interface Web" {
+  [UI - Comprador/Vendedor\n(HTML/CSS/JS)] as UI
+}
+
+package "Backend (Java)" {
+  [Spring Boot API\n(/api/v1/...)] as API
+  [Banco de Dados\nPostgreSQL\n(comentario, resultado_analise,\ncliente, produto, notificacao,\nlog_evento, dataset_registro,\nmodelo_ml)] as DB
+  [Dashboard\n(/stats, /comments,\n/export)] as DASH
+  [Módulo de Notificações\n(lê/escreve NOTIFICACAO)] as NOTIF
+}
+
+package "Microserviço ML (Python)" {
+  [FastAPI ML\nPOST /predict] as ML
+  [Modelo TF-IDF + LogReg\n(.pkl serializado)] as MODEL
+}
+
+package "Data Science" {
+  [Notebook DS\n(Jupyter / Colab)] as NB
+}
+
+package "Serviços Externos" {
+  [Serviço de E-mail/SMS\n(provedor externo)] as EXT
+}
+
+Comprador --> UI : Usa\n(visualiza produtos,\nenvia comentários)
+Vendedor  --> UI : Usa\n(visualiza dashboard,\nnotificações,\nexporta JSON)
+
+UI --> API : HTTP JSON\n/ api/v1/comentarios\n/ api/v1/sentiment\n/ api/v1/produtos\n/ api/v1/stats\n/ api/v1/comments\n/ api/v1/notificacoes\n/ api/v1/export
+
+API --> ML : HTTP JSON\nPOST /predict { text }
+ML  --> MODEL : Carrega modelo\nTF-IDF + LogReg\n(.pkl)
+ML  --> API : Retorna JSON\n{ label, probability }
+
+API --> DB   : JDBC/JPA\nCRUD em todas as tabelas
+API --> DASH : Monta respostas\npara /stats, /comments, /export
+API --> NOTIF : Cria e atualiza\nregistros em NOTIFICACAO
+API --> EXT : Envia alerta\n(e-mail/SMS)\npara comentários críticos
+
+NB --> MODEL : Treina e exporta\nmodelo .pkl
+NB --> DB : (opcional) registra\namostras em DATASET_REGISTRO
+
+@enduml

@@ -1,0 +1,50 @@
+@startuml
+title Diagrama de Navegação de Telas - Frontend Web
+
+[*] --> Login
+
+state Login {
+  [*] --> FormLogin
+  FormLogin : Selecionar perfil:\nCliente - Comprador ou\nCliente - Vendedor
+}
+
+Login --> Comprador : login como\nCLIENTE_COMPRADOR
+Login --> Vendedor  : login como\nCLIENTE_VENDEDOR
+
+state Comprador {
+  [*] --> ListaProdutos
+  ListaProdutos : Grade de cards\nde produtos
+
+  ListaProdutos --> DetalheProduto : clique no card
+  DetalheProduto : Exibe imagem,\npreço, descrição\ne campo de avaliação\n(texto + estrelas)
+
+  DetalheProduto --> AvaliacaoEnviada : enviar comentário
+  AvaliacaoEnviada : Exibe mensagem\nde sucesso\n("Comentário enviado")
+
+  AvaliacaoEnviada --> ListaProdutos : continuar comprando
+  DetalheProduto --> ListaProdutos : voltar/fechar detalhe
+}
+
+state Vendedor {
+  [*] --> Dashboard
+  Dashboard : Cards de stats geral\n(% sentimentos, nº críticos,\nnotificações pendentes)
+
+  Dashboard --> ListaComentarios : ver lista de comentários
+  ListaComentarios --> Dashboard : voltar
+
+  Dashboard --> ListaNotificacoes : ver notificações\n(com status PENDENTE/LIDA)
+  ListaNotificacoes --> Dashboard : voltar
+
+  Dashboard --> ListaProdutosVend : ver "Meus Produtos"
+  ListaProdutosVend --> FormNovoProduto : botão "Novo produto"
+  FormNovoProduto --> ListaProdutosVend : salvar ou cancelar
+
+  Dashboard --> ExportarJSON : clique em "Exportar JSON"
+  ExportarJSON : dispara download\narquivo .json com comentários
+  ExportarJSON --> Dashboard
+}
+
+Comprador --> [*] : logout
+Vendedor  --> [*] : logout
+
+@enduml

@@ -1,0 +1,47 @@
+@startuml
+title Diagrama de Sequência - Comprador envia comentário (análise interna)
+
+actor "Cliente - Comprador" as Comprador
+participant "UI Web\n(Comprador)" as UI
+participant "API Java\n(Spring Boot)" as API
+participant "Microserviço ML\n(FastAPI /predict)" as ML
+database "PostgreSQL\n(sentimentdb)" as DB
+participant "Serviço E-mail/SMS\n(opcional)" as EXT
+
+Comprador -> UI : Preenche texto + nota\ne clica em "Enviar avaliação"
+UI -> API : POST /api/v1/comentarios\n{ texto, nota, produtoId, clienteCompradorId }
+
+API -> API : Validar entrada\n(texto obrigatório, tamanho mínimo,\nnota entre 1 e 5 ou nula)
+alt Dados inválidos
+  API -> DB : INSERT LOG_EVENTO\n(WARN, API, Comentario invalido, payload)
+  API --> UI : 400 Bad Request\n{ erro: "Dados inválidos" }
+else Dados válidos
+  ' Garante que o cliente está registrado (opcional)
+  API -> DB : [opcional] SELECT/INSERT em CLIENTE\n(tipo_cliente = CLIENTE_COMPRADOR)
+
+  API -> DB : INSERT COMENTARIO\n(texto_original, nota, origem, idioma,\ncliente_comprador_id, produto_id, data_criacao)
+  API -> DB : INSERT LOG_EVENTO\n(INFO, API, Comentario salvo,\ncomentario_id, cliente_id)
+
+  ' Chamada à ML (análise interna, não exposta ao comprador)
+  API -> ML : POST /predict\n{ text: texto_original }
+  ML -> ML : Aplica modelo TF-IDF + LogReg\n(carrega .pkl se necessário)
+  ML --> API : { label, probability,\nmodel_name, model_version }
+
+  API -> DB : [opcional] SELECT/INSERT MODELO_ML\n(nome, versao, metricas...)
+  API -> DB : INSERT RESULTADO_ANALISE\n(sentimento, probabilidade,\neh_critico, data_analise,\ncomentario_id, modelo_id)
+  API -> DB : INSERT LOG_EVENTO\n(INFO, API, Resultado de analise salvo,\ncomentario_id)
+
+  alt Sentimento NEGATIVO e eh_critico = TRUE
+    API -> DB : SELECT cliente_vendedor_id\nFROM PRODUTO WHERE id = :produtoId
+    API -> DB : INSERT NOTIFICACAO\n(vendedor_id, resultado_id,\nstatus = PENDENTE, canal = DASHBOARD,\ndata_criacao = now)
+    API -> DB : INSERT LOG_EVENTO\n(INFO, API, Notificacao (dashboard) criada,\ncliente_id = vendedorId, comentario_id)
+
+    API -> EXT : Enviar alerta critico\n( email / SMS ) para o Vendedor
+    API -> DB : INSERT LOG_EVENTO\n(INFO, API, Notificacao enviada por email/SMS,\nresultado_id)
+  end
+
+  ' Resposta para o comprador NÃO contém o sentimento
+  API --> UI : 201 Created\n{ mensagem: "Comentário registrado com sucesso." }
+  UI -> Comprador : Exibe mensagem genérica\n"Seu comentário foi recebido.\nObrigado pelo feedback!"
+end
+@enduml

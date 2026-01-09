@@ -1,0 +1,39 @@
+@startuml
+left to right direction
+title Diagrama de Casos de Uso - Sentiment E-Commerce API
+
+actor "Cliente - Comprador" as Comprador
+actor "Cliente - Vendedor" as Vendedor
+actor "Equipe Data Science" as DS
+actor "Equipe Backend" as BE
+
+usecase "UC01 - Enviar comentário\nsobre produto" as UC01
+usecase "UC02 - Classificar sentimento\nde comentário (ML)" as UC02
+usecase "UC03 - Registrar resultados\ne notificações" as UC03
+usecase "UC04 - Visualizar dashboard\nde sentimentos" as UC04
+usecase "UC05 - Visualizar comentários\nnegativos/críticos" as UC05
+usecase "UC06 - Exportar feedback\nem JSON" as UC06
+usecase "UC07 - Cadastrar e gerenciar\nprodutos" as UC07
+usecase "UC08 - Treinar e publicar\nmodelo de ML" as UC08
+
+Comprador --> UC01
+
+UC01 --> UC02 : <<include>>
+UC02 --> UC03 : <<include>>
+
+Vendedor --> UC04
+Vendedor --> UC05
+Vendedor --> UC06
+Vendedor --> UC07
+
+DS --> UC08
+UC08 --> UC02 : <<include>>
+
+BE --> UC02
+BE --> UC03
+BE --> UC04
+BE --> UC05
+BE --> UC06
+BE --> UC07
+
+@enduml

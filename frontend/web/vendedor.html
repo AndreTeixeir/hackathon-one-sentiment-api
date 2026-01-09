@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sentiment E-Commerce - Cliente Vendedor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="title-group">
+      <h1>
+        <span class="logo-dot"></span>
+        Sentiment E-Commerce
+      </h1>
+      <p>Visão Cliente - Vendedor: cadastre anúncios e acompanhe a análise de sentimentos.</p>
+    </div>
+    <div class="tagline" id="vendedor-info">
+      <!-- preenchido via JS -->
+    </div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <!-- COLUNA ESQUERDA: CADASTRO DE PRODUTOS -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              Cadastro de anúncios
+              <span class="pill">Cliente - Vendedor</span>
+            </div>
+            <div class="card-subtitle">
+              Cadastre novos produtos. Eles aparecerão para Clientes - Compradores na vitrine.
+            </div>
+          </div>
+        </div>
+
+        <form id="produto-form">
+          <div class="field">
+            <label for="nome-produto">Nome do produto</label>
+            <input type="text" id="nome-produto" placeholder="Ex.: Fone de Ouvido Bluetooth" />
+          </div>
+
+          <div class="field">
+            <label for="preco-produto">Preço (R$)</label>
+            <input type="number" id="preco-produto" step="0.01" min="0" placeholder="Ex.: 249.90" />
+          </div>
+
+          <div class="field">
+            <label for="imagem-url">URL da imagem</label>
+            <input type="url" id="imagem-url" placeholder="https://..." />
+            <div class="helper">No MVP, você pode usar imagens de placeholder, se quiser.</div>
+          </div>
+
+          <div class="field">
+            <label for="categoria-produto">Categoria</label>
+            <input type="text" id="categoria-produto" placeholder="Ex.: Eletrônicos, Informática..." />
+          </div>
+
+          <div class="field">
+            <label for="tags-produto">Tags (separadas por vírgula)</label>
+            <input type="text" id="tags-produto" placeholder="Entrega rápida, Garantia 12 meses" />
+          </div>
+
+          <div class="field">
+            <label for="descricao-produto">Descrição detalhada</label>
+            <textarea id="descricao-produto" placeholder="Descreva o produto, benefícios, especificações, etc."></textarea>
+          </div>
+
+          <div id="produto-error" class="error" style="display:none;"></div>
+
+          <div class="actions">
+            <button type="button" class="secondary" id="btn-limpar-produto">Limpar</button>
+            <button type="submit" class="primary">Salvar produto</button>
+          </div>
+        </form>
+
+        <hr style="border-color: var(--border); margin: 12px 0;" />
+
+        <div class="card-subtitle">
+          Seus anúncios cadastrados:
+        </div>
+        <div id="vendor-products-list" class="vendor-products-list">
+          <!-- produtos do vendedor via JS -->
+        </div>
+      </section>
+
+      <!-- COLUNA DIREITA: STATS + NOTIFICAÇÕES + TABELA + EXPORT -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              Visão Geral de Sentimentos
+              <span class="pill">Comentários recebidos</span>
+            </div>
+            <div class="card-subtitle">
+              Estatísticas agregadas de sentimentos, notificações e exportação de dados.
+            </div>
+          </div>
+          <button class="secondary" id="btn-atualizar-dashboard">Atualizar dados</button>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card stat-pos">
+            <div class="stat-label">Positivos</div>
+            <div class="stat-value" id="stat-pos-count">–</div>
+            <div class="stat-sub" id="stat-pos-percent">–</div>
+          </div>
+          <div class="stat-card stat-neg">
+            <div class="stat-label">Negativos</div>
+            <div class="stat-value" id="stat-neg-count">–</div>
+            <div class="stat-sub" id="stat-neg-percent">–</div>
+          </div>
+          <div class="stat-card stat-neu">
+            <div class="stat-label">Neutros</div>
+            <div class="stat-value" id="stat-neu-count">–</div>
+            <div class="stat-sub" id="stat-neu-percent">–</div>
+          </div>
+        </div>
+
+        <div class="card-subtitle" style="margin-top: 6px;">
+          Notificações de comentários negativos (vinculadas a <code>resultado_analise</code> e <code>notificacao</code>):
+        </div>
+
+        <div class="notifications-list" id="notif-list">
+          <!-- notificações via JS -->
+        </div>
+
+        <hr style="border-color: var(--border); margin: 12px 0;" />
+
+        <div class="card-subtitle">
+          Comentários analisados:
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Data</th>
+                <th>Nota</th>
+                <th>Sentimento</th>
+                <th>Prob.</th>
+                <th>Crítico</th>
+                <th>Texto</th>
+              </tr>
+            </thead>
+          </table>
+          <div style="overflow-y: auto; flex: 1;">
+            <table>
+              <tbody id="comments-tbody">
+                <!-- linhas via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card-subtitle" style="margin-top: 8px;">
+          Exportação em JSON a partir de <code>/api/v1/export</code>:
+        </div>
+        <pre class="json-output" id="export-json-preview">
+<!-- JSON aparecerá aqui após clicar em "Exportar JSON" -->
+        </pre>
+
+        <div class="actions" style="justify-content: flex-start; margin-top: 6px;">
+          <button class="secondary" id="btn-exportar-json">Exportar JSON</button>
+          <span class="helper">Você pode usar esse JSON para análises adicionais fora do sistema.</span>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="jsendedor.js"></script>
+
+</body>
+</html>

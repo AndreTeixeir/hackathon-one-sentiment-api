@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sentiment E-Commerce - Cliente Comprador</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="title-group">
+      <h1>
+        <span class="logo-dot"></span>
+        Sentiment E-Commerce
+      </h1>
+      <p>Visão Cliente - Comprador: veja anúncios, compre e avalie com análise de sentimento.</p>
+    </div>
+    <div class="tagline" id="cliente-info">
+      <!-- preenchido via JS -->
+    </div>
+  </header>
+
+  <main>
+    <div class="top-info">
+      <span>Selecione um anúncio na vitrine para ver mais detalhes e avaliar.</span>
+      <span>
+        <a href="login.html">Trocar cliente / sair</a>
+      </span>
+    </div>
+
+    <div class="layout">
+      <!-- COLUNA ESQUERDA: GRADE DE PRODUTOS -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              Anúncios disponíveis
+              <span class="pill">Cadastrados por Clientes - Vendedores</span>
+            </div>
+            <div class="card-subtitle">
+              Passe o mouse sobre um anúncio para ver o nome. Clique para abrir o anúncio completo.
+            </div>
+          </div>
+        </div>
+
+        <div id="products-grid" class="products-grid">
+          <!-- Cards de produtos via JS -->
+        </div>
+      </section>
+
+      <!-- COLUNA DIREITA: DETALHE + AVALIAÇÃO -->
+      <section class="card" id="detail-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              Detalhes do anúncio
+              <span class="pill">Cliente - Comprador</span>
+            </div>
+            <div class="card-subtitle" id="detail-subtitle">
+              Clique em um produto na lista ao lado para visualizar a descrição completa e avaliar.
+            </div>
+          </div>
+        </div>
+
+        <div id="product-detail-empty">
+          <p class="helper">
+            Nenhum produto selecionado. Escolha um anúncio na coluna à esquerda para ver os detalhes,
+            botão de compra e formulário de avaliação (texto + estrelas).
+          </p>
+        </div>
+
+        <div id="product-detail" class="hidden">
+          <div class="product-detail-header">
+            <img id="detail-image" src="" alt="Imagem do produto" />
+            <div>
+              <div id="detail-name" class="product-detail-title"></div>
+              <div id="detail-price" class="product-detail-price"></div>
+              <div id="detail-meta" class="product-detail-meta"></div>
+              <div id="detail-tags" class="product-detail-meta"></div>
+            </div>
+          </div>
+
+          <div id="detail-description" class="product-detail-description"></div>
+
+          <div class="actions">
+            <button type="button" class="primary" id="btn-comprar">
+              Comprar agora
+            </button>
+          </div>
+
+          <hr style="border-color: var(--border); margin: 12px 0;" />
+
+          <form id="avaliacao-form">
+            <div style="margin-bottom: 8px;">
+              <label>Avaliação (estrelas)</label>
+              <div class="stars" id="stars-container">
+                <!-- estrelas via JS -->
+              </div>
+              <div class="helper">Clique nas estrelas para escolher uma nota de 1 a 5.</div>
+            </div>
+
+            <div style="margin-bottom: 8px; margin-top: 6px;">
+              <label for="texto-avaliacao">Comentário</label>
+              <textarea id="texto-avaliacao" placeholder="Conte sua experiência com este produto..."></textarea>
+              <div class="helper">
+                Mínimo de 3 caracteres. O texto será enviado para a API de análise de sentimento (Machine Learning).
+              </div>
+            </div>
+
+            <div id="avaliacao-error" class="error" style="display:none;"></div>
+
+            <div class="actions">
+              <button type="submit" class="primary">Enviar avaliação & analisar sentimento</button>
+            </div>
+          </form>
+
+          <div id="resultado-sentimento"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="jsomprador.js"></script>
+
+</body>
+</html>

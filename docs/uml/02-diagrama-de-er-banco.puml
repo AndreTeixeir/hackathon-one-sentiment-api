@@ -1,0 +1,188 @@
+@startuml
+left to right direction
+!theme plain
+
+package "Núcleo do Sistema" {
+
+  entity "cliente" as Cliente {
+    * id : bigint <<PK>>
+    --
+    nome         : varchar(100)
+    email        : varchar(150)
+    tipo_cliente : varchar(30)  -- CLIENTE_COMPRADOR / CLIENTE_VENDEDOR / ADMIN
+    criado_em    : timestamp
+  }
+
+  entity "produto" as Produto {
+    * id : bigint <<PK>>
+    --
+    nome               : varchar(150)
+    preco              : decimal(10,2)
+    imagem_url         : varchar(255)
+    categoria          : varchar(100)
+    tags               : varchar(255)   -- tags separadas por vírgula
+    descricao          : text
+    cliente_vendedor_id: bigint <<FK>>  -- dono do anúncio (Cliente - Vendedor)
+  }
+
+  entity "comentario" as Comentario {
+    * id : bigint <<PK>>
+    --
+    texto_original       : text
+    nota                 : smallint      -- 1 a 5, avaliação do Cliente - Comprador
+    origem               : varchar(50)   -- SITE / APP / OUTRO
+    idioma               : varchar(10)   -- ex.: pt-BR
+    data_criacao         : timestamp
+    cliente_comprador_id : bigint <<FK>> -- quem enviou (Cliente - Comprador)
+    produto_id           : bigint <<FK>> -- produto avaliado
+  }
+
+  entity "resultado_analise" as Resultado {
+    * id : bigint <<PK>>
+    --
+    sentimento     : varchar(20)   -- POSITIVO / NEGATIVO (/ NEUTRO futuramente)
+    probabilidade  : decimal(3,2)  -- 0.00 a 1.00
+    eh_critico     : boolean       -- usado p/ destacar no dashboard / notificações
+    data_analise   : timestamp
+    comentario_id  : bigint <<FK>> -- comentário analisado
+    modelo_id      : bigint <<FK>> -- modelo que gerou o resultado
+  }
+
+  entity "notificacao" as Notif {
+    * id : bigint <<PK>>
+    --
+    mensagem      : varchar(255)
+    status        : varchar(20)   -- PENDENTE / ENVIADA / LIDA
+    canal         : varchar(20)   -- DASHBOARD / EMAIL
+    data_criacao  : timestamp
+    data_envio    : timestamp
+    vendedor_id   : bigint <<FK>> -- destino (Cliente - Vendedor)
+    resultado_id  : bigint <<FK>> -- resultado_analise que originou
+  }
+
+}
+
+package "Apoio (ML, Dataset, Logs)" {
+
+  entity "modelo_ml" as Modelo {
+    * id : bigint <<PK>>
+    --
+    nome             : varchar(100) -- ex.: sentiment-logreg-tfidf
+    versao           : varchar(20)  -- ex.: v1
+    tipo_modelo      : varchar(50)  -- LogisticRegression, etc.
+    caminho_arquivo  : varchar(255) -- caminho do .pkl
+    f1_score         : decimal(4,3)
+    acuracia         : decimal(4,3)
+    data_treinamento : timestamp
+    ativo            : boolean
+  }
+
+  entity "dataset_registro" as Dataset {
+    * id : bigint <<PK>>
+    --
+    texto           : text
+    nota            : smallint      -- 1 a 5, nota do dataset (se houver)
+    rotulo_original : varchar(20)   -- POS / NEG / NEU
+    fonte           : varchar(100)  -- ex.: Kaggle
+    split           : varchar(10)   -- TRAIN / TEST / VALID
+    data_importacao : timestamp
+    id_externo      : varchar(50)   -- id no dataset de origem
+  }
+
+  entity "log_evento" as Log {
+    * id : bigint <<PK>>
+    --
+    nivel        : varchar(10)    -- INFO / WARN / ERROR
+    origem       : varchar(30)    -- API / ML_SERVICE / FRONTEND / DB
+    mensagem     : varchar(255)
+    detalhe_json : text           -- payload extra
+    data_evento  : timestamp
+    cliente_id   : bigint <<FK>>  -- opcional (Cliente - Comprador ou Cliente - Vendedor)
+    comentario_id: bigint <<FK>>  -- opcional (chamada / erro ligado a comentário)
+  }
+
+}
+
+' ------------------------
+' Relacionamentos do núcleo
+' ------------------------
+
+' Cliente - Vendedor e seus produtos
+Cliente ||--o{ Produto : "1 N\nanúncios do\nCliente - Vendedor"
+
+' Cliente - Comprador e seus comentários
+Cliente ||--o{ Comentario : "1 N\ncomentários do\nCliente - Comprador"
+
+' Produto avaliado em vários comentários
+Produto ||--o{ Comentario : "1 N\navaliações\npor produto"
+
+' Um resultado de análise por comentário (MVP)
+Comentario ||--|| Resultado : "1 1\nresultado por\ncomentário (MVP)"
+
+' Notificações para o Cliente - Vendedor
+Resultado ||--o{ Notif : "0 N\nnotificações\npara resultado"
+Cliente  ||--o{ Notif : "1 N\nnotificações\ndo Cliente - Vendedor"
+
+' ------------------------
+' Relacionamentos de apoio
+' ------------------------
+
+Modelo ||--o{ Resultado : "1 N\nresultados por\nmodelo de ML"
+
+' Dataset usado p/ treinar modelos (relação lógica, não obrigatória no DB)
+Dataset }o..o{ Modelo : "N N\namostras usadas\nno treino"
+
+' Logs opcionais ligados a cliente / comentário
+Cliente   ||--o{ Log : "1 N\nlogs de cliente"
+Comentario ||--o{ Log : "1 N\nlogs de comentário"
+
+' ------------------------
+' Notas de regras de negócio / validação
+' ------------------------
+
+note right of Cliente
+  tipo_cliente deve ser um dentre:
+  - CLIENTE_COMPRADOR
+  - CLIENTE_VENDEDOR
+  - ADMIN (opcional)
+end note
+
+note right of Resultado
+  No MVP, cada comentário
+  tem um único resultado de análise.
+  Futuramente, essa relação pode
+  virar 1:N para reprocessamento
+  com novos modelos.
+end note
+
+note right of Notif
+  Notificações são criadas
+  apenas quando
+  Resultado.sentimento = 'NEGATIVO'
+  e eh_critico = TRUE.
+
+  Campo status deve ser um dentre:
+  - PENDENTE
+  - ENVIADA
+  - LIDA
+
+  Campo canal deve ser um dentre:
+  - DASHBOARD
+  - EMAIL
+end note
+
+note right of Dataset
+  Campo split deve ser um dentre:
+  - TRAIN
+  - TEST
+  - VALID
+end note
+
+note right of Log
+  Campo nivel deve ser um dentre:
+  - INFO
+  - WARN
+  - ERROR
+end note
+
+@enduml

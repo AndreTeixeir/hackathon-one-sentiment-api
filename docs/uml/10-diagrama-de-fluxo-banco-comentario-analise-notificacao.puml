@@ -1,0 +1,55 @@
+@startuml
+title Fluxo de dados no banco - Novo comentário, análise de sentimento e notificações
+
+|UI (Frontend - Comprador)|
+start
+:Comprador preenche avaliação\n(texto + nota) e envia formulário;
+:POST /api/v1/comentarios\n(Spring Boot API);
+
+|API Java (Spring Boot)|
+:Validar texto e nota\n(tamanho mínimo, campos obrigatórios);
+
+if (Dados inválidos?) then (sim)
+  :INSERT em LOG_EVENTO\n(nivel='WARN', origem='API',\nmensagem='Comentário inválido',\ndetalhe_json=payload);
+  :Responder erro 400 para UI;
+  stop
+else (não)
+  :Garantir que Cliente - Comprador\nestá na tabela CLIENTE;
+  :INSERT em COMENTARIO\n(texto_original, nota, origem,\nidioma, cliente_comprador_id,\nproduto_id, data_criacao);
+
+  :INSERT em LOG_EVENTO\n(nivel='INFO', origem='API',\nmensagem='Comentário salvo',\ncomentario_id, cliente_id=cliente_comprador_id);
+endif
+
+:Chamar Microserviço ML\nPOST /predict { text = texto_original };
+
+|Microserviço ML (FastAPI)|
+:Carregar/usar MODEL .pkl\n(TF-IDF + LogReg);
+:Calcular label + probability;
+:Responder JSON para a API\n{ label, probability, model_name, model_version };
+
+|API Java (Spring Boot)|
+:Mapear label → SENTIMENTO enum\n(POSITIVO/NEGATIVO/NEUTRO);
+:Identificar/registrar modelo_ml\n(nome, versao) se necessário;
+
+:INSERT em RESULTADO_ANALISE\n(sentimento, probabilidade,\neh_critico, data_analise,\ncomentario_id, modelo_id);
+
+:INSERT em LOG_EVENTO\n(nivel='INFO', origem='API',\nmensagem='Resultado de análise salvo',\ncomentario_id);
+
+if (sentimento = 'NEGATIVO'\n and eh_critico = TRUE) then (sim)
+  :Descobrir Vendedor\nvia PRODUTO.cliente_vendedor_id;
+
+  :INSERT em NOTIFICACAO\n(vendedor_id, resultado_id,\nstatus='PENDENTE', canal='DASHBOARD',\ndata_criacao=now);
+
+  :INSERT em LOG_EVENTO\n(nivel='INFO', origem='API',\nmensagem='Notificação (dashboard) criada',\ncliente_id=vendedor_id, comentario_id);
+
+  :Disparar processo de envio externo\n(e-mail/SMS) via serviço de notificação\n(assíncrono, fora do DB);
+
+  :INSERT em LOG_EVENTO\n(nivel='INFO', origem='API',\nmensagem='Notificação enviada por e-mail/SMS',\nresultado_id);
+endif
+
+:Montar resposta para o Frontend\n{ previsao, probabilidade };
+
+|UI (Frontend - Comprador)|
+:Exibir mensagem ao usuário:\n"Seu comentário foi recebido.\nObrigado pelo feedback!";
+stop
+@enduml

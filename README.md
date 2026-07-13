@@ -12,6 +12,8 @@ A solução integra um backend robusto em **Java/Spring Boot** com um microservi
 
 O projeto está implantado e acessível na Oracle Cloud Infrastructure (OCI).
 
+> Infraestrutura e deploy em OCI (provisionamento da instância e scripts de automação): **André Teixeira**.
+
 | Componente | URL |
 | :--- | :--- |
 | **API & Backend** | [http://152.67.61.11:8080/](http://152.67.61.11:8080/) |
@@ -95,7 +97,7 @@ Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máqu
 | **Brena Stephany Chagas Paula** | [Perfil LinkedIn](https://www.linkedin.com/in/brena-stephany) |
 | **Luiz Carlos Tannous Del Nero** | [Perfil LinkedIn](https://www.linkedin.com/in/luiz-carlos-tannous-del-nero-b44166255) |
 | **Letícia de Almeida Ferreira** | [Perfil LinkedIn](http://linkedin.com/in/leticia-de-almeida-ferreira-18086a180) |
-| **André Teixeira** | [Perfil LinkedIn](https://www.linkedin.com/in/andr%C3%A9-teixeira-15503046/) |
+| **André Teixeira** | [Perfil LinkedIn](https://www.linkedin.com/in/andreteixeir) |
 
 ## 📄 Licença
 

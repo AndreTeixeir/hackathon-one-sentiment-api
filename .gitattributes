@@ -1,0 +1,12 @@
+# Estatísticas de linguagem (GitHub Linguist)
+#
+# Os notebooks de exploração/prototipagem do lado Data Science carregam os
+# outputs embutidos (imagens em base64) e somam ~253 KB, contra ~44 KB de
+# código Java. Por peso de bytes, eles dominavam as estatísticas e o
+# repositório aparecia como "Jupyter Notebook".
+#
+# Este projeto é uma API REST em Spring Boot integrada a um serviço de ML
+# em FastAPI. Os notebooks documentam a exploração que originou o modelo,
+# mas não são o produto — por isso entram como documentação.
+
+datascience/*.ipynb linguist-documentation

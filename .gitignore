@@ -23,8 +23,9 @@ env/
 # ===== Jupyter =====
 .ipynb_checkpoints/
 
-# ===== Model artifacts (decida depois) =====
-# Para hackathon, pode ser útil versionar o modelo.
-# Se você quiser versionar, REMOVA as 2 linhas abaixo.
-*.joblib
-*.pkl
+# ===== Model artifacts =====
+# Decisão (ver ADR-004): versionar os artefatos do modelo. São pequenos
+# (~55 KB) e sem isso um clone limpo não sobe com o modelo real.
+
+# Documento de trabalho da revisão técnica, não faz parte do projeto
+HANDOFF-claude-code.md

@@ -63,7 +63,7 @@ O sistema será inicialmente entregue como um **MVP (Minimum Viable Product)**, 
 - **ML** – Machine Learning.
 - **Cliente - Comprador** – usuário que envia comentários e avaliações de produtos.
 - **Cliente - Vendedor** – usuário (empresa ou dono de loja) que cadastra produtos e acompanha feedbacks.
-- **Sentimento** – classificação do comentário em termos de opinião (POSITEVO / NEGATIVO / NEUTRO).
+- **Sentimento** – classificação do comentário em termos de opinião (POSITIVO / NEGATIVO — modelo binário, ver ADR-004).
 - **RF** – Requisito Funcional.
 - **RNF** – Requisito Não Funcional.
 - **OCI** – Oracle Cloud Infrastructure (alvo futuro de deploy do banco).
@@ -390,7 +390,7 @@ O ML deve responder com JSON contendo, no mínimo:
 }
 ```
 
-Mapeando `label` para o enum de `Sentimento` em português (`NEGATIVO`, `POSITIVO`, `NEUTRO`).
+Mapeando `label` para o enum de `Sentimento` em português (`NEGATIVO`, `POSITIVO`) — modelo binário, ver ADR-004.
 
 ---
 
@@ -498,7 +498,6 @@ Retornando algo como:
   "totalComentarios": 120,
   "positivos": 80,
   "negativos": 30,
-  "neutros": 10,
   "criticos": 5
 }
 ```

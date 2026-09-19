@@ -4,9 +4,15 @@ API para análise de sentimentos em textos utilizando Machine Learning, desenvol
 
 ## 📋 Visão Geral
 
-Este projeto implementa uma solução completa de análise de sentimentos que classifica comentários (de e-commerce, redes sociais, etc.) como **Positivo**, **Negativo** ou **Neutro**.
+Este projeto implementa uma solução de análise de sentimentos que classifica um texto como **Positivo** ou **Negativo**, com a probabilidade associada.
 
-A solução integra um backend robusto em **Java/Spring Boot** com um microserviço de **Data Science em Python**, orquestrados via Docker.
+A solução integra um backend em **Java/Spring Boot** com um microserviço de **Data Science em Python**, orquestrados via Docker.
+
+### Sobre o modelo
+
+O classificador é `TF-IDF` + `LogisticRegression` (scikit-learn), treinado com **4.044 avaliações do parque de diversões Hopi Hari** — não é um modelo de e-commerce ou redes sociais, e a acurácia fora desse domínio não foi medida. É **binário**: não existe classe "Neutro" (decisão registrada em `nginx/docs/adr/ADR-004-modelo-treinado-e-contrato-binario.md`). O modelo também é sensível a acentuação — remover acentos do texto de entrada degrada a classificação.
+
+Se o artefato do modelo não carregar, o serviço cai num fallback heurístico simples — de propósito, para não derrubar a API — mas isso é **sinalizado explicitamente** em `GET /api/v1/health` (`mode: "model"` ou `"fallback"`), nunca silencioso. Detalhes completos em `nginx/docs/ml-model-card.md`.
 
 ## 🔗 Demonstração Online (Live Demo)
 
@@ -16,9 +22,10 @@ O projeto está implantado e acessível na Oracle Cloud Infrastructure (OCI).
 
 | Componente | URL |
 | :--- | :--- |
-| **API & Backend** | [http://152.67.61.11:8080/](http://152.67.61.11:8080/) |
+| **API, Backend & Frontend** | [http://152.67.61.11:8080/](http://152.67.61.11:8080/) |
 | **Documentação da API (Swagger)** | [http://152.67.61.11:8080/swagger-ui.html](http://152.67.61.11:8080/swagger-ui.html) |
-| **Frontend** | [http://152.67.61.11](http://152.67.61.11) |
+
+O frontend é servido pelo próprio Spring Boot (não por um container Nginx separado) — por isso a mesma URL da API.
 
 ## 📺 Vídeo de Demonstração
 
@@ -71,22 +78,23 @@ Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máqu
     *   **API:** `http://localhost:8080/api/v1/sentiment`
     *   **DS Service Health:** `http://localhost:8000/health`
 
-## 🔌 Endpoints Principais
+## 🔌 Endpoints
 
 | Método | Endpoint | Descrição |
 | :--- | :--- | :--- |
-| `POST` | `/api/v1/sentiment` | Analisa um texto avulso e retorna o sentimento (Positivo, Negativo, Neutro). |
-| `POST` | `/api/v1/comentarios` | Regista um comentário no banco de dados e o classifica automaticamente. |
-| `GET` | `/api/v1/dashboard/stats/{id}` | Retorna estatísticas agregadas de sentimentos para um vendedor específico. |
+| `POST` | `/api/v1/sentiment` | Analisa um texto avulso e retorna o sentimento (Positivo ou Negativo) com a probabilidade. |
+| `POST` | `/api/v1/sentiment/batch` | Analisa uma lista de textos de uma vez. |
+| `GET` | `/api/v1/stats` | Estatísticas agregadas de todas as análises já feitas. |
+| `GET` | `/api/v1/health` | Saúde da aplicação e do microserviço de ML — inclui se o modelo real está carregado ou se está em modo de fallback. |
 
-> Para a lista completa de endpoints, consulte a documentação Swagger na URL de demonstração.
+> Para a lista completa (incluindo schemas de request/response), consulte a documentação Swagger na URL de demonstração.
 
 ## 📂 Estrutura do Projeto
 
-*   `/backend`: Código fonte da API principal em Java/Spring Boot.
+*   `/backend/sentiment-backend`: Código fonte da API principal em Java/Spring Boot (o frontend estático também mora aqui, em `src/main/resources/static/`).
 *   `/ds-service`: Microserviço Python de Machine Learning (FastAPI).
 *   `/datascience`: Notebooks (Jupyter) de treino do modelo e datasets.
-*   `/docs`: Documentação técnica detalhada (Arquitetura, Requisitos, Diagramas).
+*   `/nginx/docs`: Documentação técnica detalhada (arquitetura, requisitos, model card, ADRs).
 *   `/scripts`: Scripts de automação para deploy na OCI.
 
 ## 👥 A Equipa (Participantes)

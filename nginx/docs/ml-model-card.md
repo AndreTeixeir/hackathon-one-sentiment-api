@@ -1,486 +1,205 @@
 # Model Card · Hackathon One Sentiment API
 **Projeto:** Hackathon One Sentiment API  
-**Versão do documento:** 1.0  
-**Data:** 28/12/2025
+**Versão do documento:** 2.0  
+**Data:** 19/09/2026  
+**Escopo:** Modelo de classificação de sentimento em uso na branch `main`
 
 ---
+
+> **Nota sobre esta revisão.** A versão 1.0 deste documento descrevia uma arquitetura planejada (dataset Kaggle, tabela `modelo_ml`, contrato `/predict` com `model_name`/`model_version`) que nunca foi implementada na `main` — era um template preenchido com suposições, não com o que o time efetivamente construiu. Esta revisão substitui as seções por descrição do sistema real, verificado por execução (ver ADR-004). Onde uma métrica não foi medida, o documento diz isso explicitamente, em vez de manter um `TODO` como se fosse pendência trivial.
 
 ## 1. Identidade do modelo
 
-- **Nome lógico do modelo:** `hackathon-one-sentiment-ptbr`
-- **Tipo de modelo:** Classificador de texto (análise de sentimento)
-- **Arquitetura:** `TF-IDF` + `LogisticRegression` (scikit-learn)
-- **Tarefa:** Classificação de sentimento em português brasileiro
+- **Arquitetura:** `TfidfVectorizer` + `LogisticRegression` (scikit-learn), combinados num único `sklearn.Pipeline`.
+- **Tarefa:** classificação binária de sentimento em português brasileiro.
 - **Saídas:**
-    - `sentimento` ∈ {`POSITIVO`, `NEGATIVO`, `NEUTRO`}
-    - `probabilidade` ∈ [0, 1]
-- **Local do arquivo serializado (repositório):**  
-  `datascience/ml_service/model/sentiment_model.pkl`
-- **Equipe responsável:**  
-  Equipe de Data Science (DS) do projeto **Hackathon One Sentiment API**
-
-No banco de dados, este modelo deve ser registrado na tabela `modelo_ml` com algo semelhante a:
-
-- `nome`: `hackathon-one-sentiment-ptbr`
-- `versao`: `v1` (ou outra convenção definida pelo time)
-- `tipo_modelo`: `LogisticRegression`
-- `caminho_arquivo`: caminho completo do `.pkl` no ambiente de produção
-- `f1_score`, `acuracia`: métricas preenchidas com resultados reais do treino
-
----
+    - `label` ∈ {`Positivo`, `Negativo`} — **não existe classe Neutro** (ver §5.1 e ADR-004).
+    - `probability` ∈ [0, 1] — probabilidade da classe prevista, vinda de `predict_proba`.
+- **Artefato serializado:** `ds-service/models/sentiment.joblib`, versionado no repositório (54 KB). Gerado por `datascience/build_pipeline.py` a partir de `datascience/tfidf_vectorizer.pkl` + `datascience/sentiment_model.pkl`.
+- **Identificação de versão em uso:** não há um nome/versão semântica atribuídos ao modelo — o `/health` do `ds-service` expõe `model_version` como o **SHA-256 do arquivo `.joblib`**, verificável independentemente com `sha256sum` e estável enquanto o artefato não mudar. Não existe tabela `modelo_ml` nem qualquer outro registro de versionamento no banco nesta implementação.
+- **Equipe responsável:** equipe de Data Science do Hackathon One (ver `datascience/README_DS.md` para o histórico de decisões).
 
 ## 2. Objetivo e uso previsto
 
 ### 2.1. Problema que o modelo resolve
 
-O modelo foi criado para:
+Classifica um texto em português como `Positivo` ou `Negativo`, com uma probabilidade associada. É o motor de inferência por trás de `POST /api/v1/sentiment` e `POST /api/v1/sentiment/batch`.
 
-- classificar automaticamente **comentários de clientes em português** (ex.: avaliações de produtos, feedbacks de atendimento);
-- identificar se o sentimento predominante é:
-    - **POSITIVO**
-    - **NEGATIVO**
-    - **NEUTRO** (opcional, dependendo do escopo final do dataset/modelo);
-- ajudar **equipes de atendimento, marketing e operações** a:
-    - priorizar respostas a comentários negativos;
-    - ter uma visão agregada da satisfação ao longo do tempo;
-    - identificar pontos críticos em produtos e serviços.
+### 2.2. Fluxo real de integração
 
-### 2.2. Contexto de uso dentro do projeto
+1. Um cliente HTTP chama `POST /api/v1/sentiment` no backend Spring Boot, com `{"text": "..."}`.
+2. O backend (`DsServiceClient`) chama `POST /predict` no `ds-service` (FastAPI), com o mesmo texto.
+3. O `ds-service` roda o `Pipeline` (ou o fallback heurístico, se o modelo não estiver carregado — ver §6.5) e devolve `{"label": "Positivo"|"Negativo", "probability": 0.0-1.0}`.
+4. O backend mapeia `label` para o enum `Sentimento` (`Sentimento.fromLabel`) e persiste o resultado na tabela `analise_resultado` (entidade JPA `AnaliseResultado`, coluna `sentimento` com `CHECK (sentimento IN ('POSITIVO', 'NEGATIVO'))`).
+5. A resposta (`previsao`, `probabilidade`) volta diretamente ao chamador de `/api/v1/sentiment` — **não há distinção de papel "Comprador" vs "Vendedor"** nesta implementação; quem chama o endpoint recebe a classificação na própria resposta HTTP. (Essa distinção existe como decisão de produto registrada no ADR-002, mas pertence a uma arquitetura de backend diferente da que está em `main` — ver a ressalva de pacotes divergentes no `CLAUDE.md` do projeto.)
 
-No contexto do **Hackathon One Sentiment API**, o fluxo previsto é:
-
-1. **Comprador** envia um comentário sobre um produto (texto + nota).
-2. A **API Java (Spring Boot)** salva o comentário no banco (`comentario`).
-3. A API faz uma requisição HTTP para o microserviço de ML (`POST /predict`), enviando o texto.
-4. O microserviço de ML aplica o modelo e retorna:
-```json
-   {
-     "label": "NEGATIVE",
-     "probability": 0.82,
-     "model_name": "hackathon-one-sentiment-ptbr",
-     "model_version": "v1"
-   }
-````
-
-5. A API grava o resultado da análise em `resultado_analise` e, se for negativo crítico, gera uma `notificacao` para o vendedor.
-6. Apenas o **Vendedor** (ou equipe interna) vê os insights de sentimento no dashboard.
-   O **Comprador não recebe explicitamente o rótulo do sentimento**.
+Não há tabela `comentario`, `notificacao` ou `modelo_ml` na implementação atual — essas entidades pertencem ao schema descrito em `ddl/schema-postgres.sql`, que diverge da entidade JPA realmente usada (`AnaliseResultado`/`analise_resultado`). Essa divergência de schema é conhecida e está fora do escopo desta correção.
 
 ### 2.3. Usos pretendidos
 
-* Analisar sentimento de:
-
-  * avaliações de produtos de e-commerce;
-  * comentários em formulários de satisfação;
-  * feedbacks de atendimento em português brasileiro.
-* Apoiar:
-
-  * priorização de tickets de suporte;
-  * monitoramento de campanhas de marketing;
-  * visão histórica de sentimento por produto/serviço.
+Classificar comentários em texto livre, em português, no domínio de **avaliações de parque de diversões** (ver §3.1 — é o domínio real de treino, não e-commerce ou redes sociais).
 
 ### 2.4. Usos não recomendados / fora de escopo
 
-Este modelo **não foi projetado** para:
-
-* Tomar decisões automáticas que impactem direitos das pessoas, por exemplo:
-
-  * concessão de crédito;
-  * admissões/demissões;
-  * bloqueio de contas;
-  * restrição de acesso a serviços essenciais.
-* Analisar:
-
-  * textos altamente técnicos, jurídicos ou médicos;
-  * textos em outros idiomas (inglês, espanhol etc.) sem retreino adequado;
-  * sarcasmo complexos, ironia pesada ou humor muito contextual.
-* Classificar ódio, discurso discriminatório, assédio ou outros temas sensíveis
-  como tarefa específica de moderação de conteúdo.
-  (Ele apenas retorna sentimento geral; não substitui um modelo especializado em segurança/moderação.)
+- Decisões automáticas que afetem direitos de pessoas (crédito, admissão/demissão, bloqueio de acesso).
+- Textos fora do domínio de treino sem validação prévia (jurídico, médico, técnico).
+- Textos em outro idioma que não português.
+- Moderação de conteúdo (discurso de ódio, assédio) — o modelo classifica sentimento geral, não é especializado nisso.
+- Qualquer inferência que dependa de reconhecer sarcasmo complexo ou ironia — não testado, não confiável (ver §6.2).
 
 ---
 
 ## 3. Dados de treino e avaliação
 
-> Os detalhes abaixo devem ser preenchidos com informações reais assim que o notebook de treino estiver consolidado.
-> Aqui fica o “contrato” do que deve ser registrado.
+### 3.1. Fonte de dados — real, não planejada
 
-### 3.1. Fontes de dados
+**Dataset:** `datascience/hopi_hari (1).csv` — **4.044 avaliações do parque de diversões Hopi Hari**, com colunas `comentario`, `nota` (1 a 5) e `data`. Não é um dataset de e-commerce nem de redes sociais — é avaliação de experiência em parque temático (filas, brinquedos, estrutura, atendimento).
 
-* **Fonte principal (planejada):**
-  Dataset público de sentimento em português, por exemplo:
-  *Brazilian Portuguese Sentiment Analysis Datasets* (Kaggle) – contendo textos categorizados como positivos/negativos (e possivelmente neutros).
+### 3.2. Rotulagem (binarização)
 
-* **Possíveis fontes complementares:**
+Decisão da equipe de DS, documentada no vídeo de demonstração do projeto (1:51) e implementada em `datascience/Hackathon_One_Nb1.ipynb`:
 
-  * avaliações públicas de produtos;
-  * reviews de apps (ex.: lojas de aplicativos);
-  * outros datasets públicos de PT-BR com rótulos de sentimento.
+- `nota` ≤ 3 → classe `0` (Negativo) — **2.157 registros**
+- `nota` ≥ 4 → classe `1` (Positivo) — **1.887 registros**
 
-### 3.2. Armazenamento e rastreabilidade
+Não existe classe intermediária no dataset original nem no rótulo derivado.
 
-* O repositório de Data Science guarda:
+### 3.3. Tamanho e split
 
-  * notebooks em `datascience/ml_notebooks/`;
-  * dados preparados em `datascience/data/`.
-* O banco de dados possui a tabela `dataset_registro` com campos:
+- Total: 4.044 registros.
+- Split treino/teste: `Hackathon_One_Nb2.ipynb` usa `train_test_split(test_size=0.2, random_state=42, stratify=y)` — mas **as métricas dessa execução específica não foram salvas em lugar nenhum do repositório** (nem no notebook versionado, nem em arquivo à parte). Não há como recuperá-las sem re-executar o notebook. Ver §5.3.
 
-  * `texto`
-  * `nota` (se o dataset trouxer rating 1–5)
-  * `rotulo_original` (ex.: `POS`, `NEG`, `NEU`)
-  * `fonte` (ex.: `Kaggle - BP Sentiment`)
-  * `split` (`TRAIN`, `TEST`, `VALID`)
-  * `data_importacao`
-  * `id_externo` (id no dataset original, se houver)
+### 3.4. Pré-processamento aplicado no treino
 
-Isso permite reconstruir quais amostras foram usadas em qual split e de onde vieram.
+`Hackathon_One_Nb1.ipynb`, célula 18, função `limpar_texto()`: minúsculas, remove tudo que não seja letra (incluindo acentuadas: `áàâãéèêíïóôõöúçñ`) ou espaço, colapsa espaços múltiplos. Aplicada uma vez sobre o dataset bruto, salva em `datascience/dataset_sentimento_limpo.csv` — é sobre esse CSV já limpo que o `TfidfVectorizer` é treinado (`Hackathon_One_Nb2.ipynb`).
 
-### 3.3. Tamanho do dataset
+**O serviço de inferência (`ds-service`) NÃO replica essa limpeza antes de vetorizar.** Isso foi medido, não presumido: rodando o `Pipeline` sobre os 4.044 registros originais, comparando texto bruto contra texto processado com `limpar_texto()`, a acurácia foi 87,86% (bruto) contra 87,81% (limpo) — diferença de 0,05 ponto percentual, 1,4% de predições divergentes, sem viés de direção. O `TfidfVectorizer` (`lowercase=True` por padrão, tokenizador que já ignora pontuação) absorve a maior parte do que a limpeza customizada fazia; a fresta remanescente (fusão de palavras hifenizadas) é um efeito estreito, não sistemático. **Conclusão: replicar `limpar_texto()` no serviço não é necessário.**
 
-> Substitua os “TODO” após o treino:
+### 3.5. Vetorização (TF-IDF)
 
-* Total de exemplos: **TODO**
-* Treino (`TRAIN`): **TODO**
-* Validação (`VALID`): **TODO**
-* Teste (`TEST`): **TODO**
+Parâmetros reais usados em `Hackathon_One_Nb2.ipynb`:
 
-### 3.4. Pré-processamento aplicado
+```python
+TfidfVectorizer(
+    max_features=1000,
+    min_df=2,
+    max_df=0.95,
+    ngram_range=(1, 2),
+    stop_words=stopwords.words('portuguese'),  # via nltk
+)
+```
 
-Passos típicos de pré-processamento (a serem confirmados no notebook):
-
-* normalização para minúsculas (`lowercase`);
-* remoção opcional de:
-
-  * pontuação;
-  * dígitos;
-  * múltiplos espaços;
-* tokenização padrão (scikit-learn);
-* remoção eventual de stopwords em PT-BR (a confirmar);
-* vetorização com **TF-IDF**:
-
-  * uni-gramas (palavras simples) e, possivelmente, bi-gramas;
-  * limite mínimo de frequência (ex.: `min_df`);
-  * limite máximo (ex.: `max_df` para remover palavras muito comuns).
+Vocabulário final: 1.000 features, incluindo 168 tokens com acento — relevante para a limitação descrita em §6.1.
 
 ---
 
 ## 4. Detalhes de treinamento
 
-### 4.1. Ambiente de treinamento
+### 4.1. Ambiente
 
-* Linguagem: **Python 3.x**
-* Principais bibliotecas:
+- Python 3, Google Colab.
+- Bibliotecas: `pandas`, `numpy`, `scikit-learn` **1.6.1**, `nltk` (stopwords), `joblib`.
+- Notebooks: `datascience/Hackathon_One_Nb1.ipynb` (limpeza + rotulagem) → `datascience/Hackathon_One_Nb2.ipynb` (vetorização + treino + serialização).
 
-  * `pandas`
-  * `numpy`
-  * `scikit-learn`
-  * `joblib`
-* Ambiente:
+### 4.2. Classificador
 
-  * Jupyter Notebook (Colab / VS Code)
-* Local do notebook:
+```python
+LogisticRegression(
+    max_iter=1000,
+    solver='lbfgs',
+)
+```
+(`penalty='l2'` é o default do scikit-learn — não foi customizado.)
 
-  * `datascience/ml_notebooks/sentiment_model.ipynb` (nome sugerido)
+### 4.3. Combinação em Pipeline único (etapa desta correção, não do notebook original)
 
-### 4.2. Arquitetura do modelo
+O notebook original serializa `tfidf_vectorizer.pkl` e `sentiment_model.pkl` como **dois objetos separados**. `datascience/build_pipeline.py` os combina num único `sklearn.Pipeline` e salva em `ds-service/models/sentiment.joblib`, para que o serviço não precise saber que existe uma etapa de vetorização separada. Verificado por execução: o artefato combinado carrega com scikit-learn 1.6.1 sem `InconsistentVersionWarning`, e reproduz exatamente as mesmas probabilidades dos dois objetos originais.
 
-* **Pipeline scikit-learn** típico:
-
-  ```python
-  from sklearn.feature_extraction.text import TfidfVectorizer
-  from sklearn.linear_model import LogisticRegression
-  from sklearn.pipeline import Pipeline
-
-  pipeline = Pipeline([
-      ("tfidf", TfidfVectorizer(
-          # configurar idioma, n-grams, min_df/max_df etc.
-      )),
-      ("clf", LogisticRegression(
-          # C, penalty, max_iter, class_weight, etc.
-      ))
-  ])
-  ```
-
-* O pipeline completo é serializado com `joblib.dump(pipeline, "sentiment_model.pkl")`
-  e usado diretamente no microserviço.
-
-### 4.3. Hiperparâmetros (exemplo de configuração-alvo)
-
-> Os valores abaixo são **referência**. A equipe DS deve registrar os valores finais usados.
-
-* `TfidfVectorizer`:
-
-  * `ngram_range`: `(1, 2)` (uni e bi-gramas)
-  * `min_df`: valor a definir (ex.: 2 ou 5)
-  * `max_df`: valor a definir (ex.: 0.8 ou 0.9)
-  * `sublinear_tf`: `True` (a confirmar)
-* `LogisticRegression`:
-
-  * `C`: valor pós-tuning (ex.: 1.0, 2.0…)
-  * `penalty`: `"l2"`
-  * `solver`: `"liblinear"` ou `"saga"` (dependendo do conjunto e tamanho)
-  * `max_iter`: valor suficiente para convergir (ex.: 1000)
-
-### 4.4. Procedimento de treinamento
-
-Fluxo sugerido:
-
-1. Carregar dados rotulados em PT-BR.
-2. Dividir em `TRAIN`, `VALID`, `TEST` (ou usar `train_test_split` + cross-validation).
-3. Fazer tuning simples de hiperparâmetros (ex.: `GridSearchCV` ou `RandomizedSearchCV`).
-4. Treinar modelo final usando:
-
-   * todos os dados de treino,
-   * melhores hiperparâmetros encontrados.
-5. Avaliar no conjunto de teste.
-6. Registrar métricas e anotar na tabela `modelo_ml`.
-7. Exportar pipeline final com `joblib.dump`.
+**scikit-learn 1.6.1 é a versão de treino, e precisa ser a versão de serving.** Testado nos dois sentidos: com scikit-learn 1.5.2 (versão que estava pinada no `ds-service/requirements.txt` antes desta correção), o carregamento emite 4 `InconsistentVersionWarning` (um por estimador do Pipeline); com 1.6.1, nenhum.
 
 ---
 
 ## 5. Avaliação e métricas
 
-### 5.1. Tarefa de avaliação
+### 5.1. Tarefa — binária, não trinária
 
-* Tarefa: **classificação de sentimento** em 2 ou 3 classes (dependendo do dataset final):
+A versão anterior deste documento especulava "2 ou 3 classes, dependendo do dataset final". **É definitivamente binária.** A alternativa de derivar "Neutro" de uma faixa de probabilidade (0,40 ≤ p ≤ 0,60) foi avaliada e descartada — medição sobre os 4.044 registros:
 
-  * binário: `POSITIVO` vs `NEGATIVO`
-  * ou trinário: `POSITIVO` / `NEUTRO` / `NEGATIVO`
+| | |
+|---|---|
+| Registros na faixa 0,40–0,60 | 569 de 4.044 (14,1%) |
+| Rótulo verdadeiro dos capturados | 314 positivos / 255 negativos |
+| % de registros nota 4 capturados pela faixa | 23,2% |
+| % de registros nota 3 capturados pela faixa (nota 3 é o proxy mais próximo de "neutro" no dataset) | 19,5% |
+| Acurácia do modelo dentro da faixa | 61,9% |
+| Acurácia do modelo fora da faixa | 92,1% |
 
-### 5.2. Métricas recomendadas
+A faixa captura proporcionalmente **mais** notas 4 (claramente positivas) do que notas 3, e incide justamente onde o modelo erra mais. Ou seja: a faixa de baixa confiança não corresponde a texto neutro — corresponde à zona de erro do classificador. Rotulá-la como "Neutro" apresentaria um erro do modelo como se fosse uma categoria de produto.
 
-* **Acurácia (Accuracy)**
-* **Precisão (Precision)** – por classe e macro
-* **Recall** – por classe e macro
-* **F1-score** – por classe e macro
-* **Matriz de confusão**
+### 5.2. Métricas — não medidas nesta revisão
 
-### 5.3. Resultados esperados (template a ser preenchido)
+**Acurácia, precisão, recall e F1-score não são reportados aqui.** O split de treino/teste original (`Hackathon_One_Nb2.ipynb`, `random_state=42`) nunca teve seu resultado salvo — nem no próprio notebook versionado (as células de avaliação existem, mas a saída não foi persistida), nem em arquivo separado. Qualquer número que fosse calculado agora, re-executando o notebook ou avaliando sobre o dataset inteiro, seria **in-sample** (o modelo já viu esses dados no treino) e enganoso se apresentado como métrica de generalização.
 
-Preencher a tabela a seguir com os valores reais obtidos no conjunto de teste:
-
-| Métrica  | Valor global | Positivo | Negativo | Neutro (se aplicável) |
-| -------- | -----------: | -------: | -------: | --------------------: |
-| Acurácia |         TODO |        — |        — |                     — |
-| Precisão |         TODO |     TODO |     TODO |                  TODO |
-| Recall   |         TODO |     TODO |     TODO |                  TODO |
-| F1-score |         TODO |     TODO |     TODO |                  TODO |
-
-Além da tabela, é recomendado salvar a **matriz de confusão** no notebook e, se possível, anexar como imagem em `docs/` ou no próprio notebook.
+**Para obter métricas reais:** re-executar `Hackathon_One_Nb2.ipynb` do zero (o split é determinístico via `random_state=42`), capturar a saída de `classification_report` sobre o conjunto de teste, e atualizar esta seção com os valores reais e a data da medição.
 
 ---
 
 ## 6. Comportamento do modelo e limitações
 
-### 6.1. Idioma e domínio
+### 6.1. Sensibilidade a acentuação — limitação verificada, não teórica
 
-* O modelo foi treinado com **textos em português brasileiro**.
-* Ele tende a funcionar melhor em:
+O vocabulário TF-IDF contém 168 tokens acentuados. Texto sem acento perde essas features. Medido:
 
-  * comentários de produtos;
-  * avaliações de experiência de compra;
-  * frases relativamente curtas a médias.
+| Texto | Probabilidade (positivo) | Classificação |
+|---|---|---|
+| `"produto péssimo, veio com defeito e atrasou"` | 0,178 | Negativo (correto) |
+| `"produto pessimo, veio com defeito e atrasou"` (mesma frase, sem acentos) | 0,536 | Positivo (**incorreto**) |
 
-**Limitações:**
+**Não normalizar acentos só na inferência** — o vocabulário treinado *tem* acentos; normalizar de um lado só pioraria o resultado. A correção exigiria consistência entre treino e inferência (reprocessar o dataset e retreinar), fora do escopo desta correção. Fica registrada como limitação conhecida, a ser considerada na documentação voltada ao usuário (README).
 
-* Pode ter queda de desempenho em:
+### 6.2. Domínio de treino — parque de diversões, não e-commerce
 
-  * textos em português europeu, mistos (PT-BR + EN), ou totalmente em outros idiomas;
-  * jargões muito específicos de nichos pouco representados no dataset;
-  * textos muito longos (parágrafos extensos) ou muito curtos (1–2 palavras).
+O modelo foi treinado exclusivamente com avaliações do parque Hopi Hari — filas, brinquedos, estrutura, atendimento. Não há nenhuma avaliação de e-commerce, aplicativo ou rede social no dataset de treino. Desempenho fora desse domínio não foi medido e é esperado ser inferior.
 
-### 6.2. Sarcasmo, ironia e contexto
+### 6.3. Sarcasmo, ironia e contexto
 
-* O modelo **não entende de forma robusta**:
+Sem mudança em relação à avaliação original: o modelo decide com base nas palavras presentes e em como apareceram no treino, não interpreta sarcasmo ou ironia de forma robusta.
 
-  * sarcasmo complexo (“Nossa, chegou quebrado, que maravilha…”);
-  * ironias onde o tom se inverte;
-  * piadas internas que dependem de contexto externo.
+### 6.4. Probabilidades
 
-Ele toma decisão apenas com base nas palavras presentes e na forma como foram vistas no dataset de treino.
+`probability` vem de `predict_proba` da Regressão Logística — é uma estimativa baseada nos dados de treino, não uma garantia de confiança. Não existe, na implementação atual, nenhum limiar adicional (tipo "crítico") aplicado sobre essa probabilidade.
 
-### 6.3. Emojis, gírias e abreviações
+### 6.5. Modo de degradação — explícito, não silencioso
 
-* Emojis podem influenciar, mas o efeito depende de como aparecem no dataset.
-* Gírias, abreviações, erros de ortografia e internetês podem:
-
-  * tanto ajudar (se presentes no treino),
-  * quanto prejudicar (se raros ou usados de forma diferente).
-
-### 6.4. Probabilidades e limiares
-
-* A `probabilidade` retornada pelo modelo vem do `predict_proba` da Regressão Logística.
-* Ela **não é uma garantia absoluta** de confiança; é uma estimativa baseada nos dados de treino.
-* Para marcar algo como “crítico”, o sistema pode usar um limiar extra:
-
-  * ex.: `NEGATIVO` com probabilidade > `0.8` → `eh_critico = TRUE`.
-* Esse limiar deve ser ajustado pela equipe com base em testes reais.
+Se o artefato `.joblib` não existir ou falhar ao carregar (arquivo ausente ou corrompido), o `ds-service` cai num fallback heurístico de 7 palavras-chave (`ruim`, `péssim`, `horr`, `defeito`, `demor`, `atras`, `não recomendo` → Negativo com p=0,85; qualquer outro texto → Positivo com p=0,75). **Isso é uma decisão de degradação graciosa, mantida de propósito** — o que mudou nesta correção é que o modo deixou de ser silencioso: `/health` do `ds-service` expõe `mode` (`"model"`/`"fallback"`), `model_loaded`, `model_version` e `fallback_reason`, e a inicialização em modo fallback gera um log `WARNING`. Antes desta correção, o fallback era permanente e indistinguível do modelo real de fora — era exatamente esse o problema que a revisão técnica original identificou (ver ADR-004).
 
 ---
 
 ## 7. Considerações éticas e riscos
 
-### 7.1. Papel do modelo no sistema
+Sem mudança material da versão anterior: o modelo não toma decisão final sozinha, reflete os vieses do dataset de treino (domínio único — parque de diversões — e período limitado de coleta), e não deve ser usado para decisões sensíveis sobre pessoas.
 
-* O modelo **não toma decisões finais** sozinho.
-* Ele é usado para:
-
-  * marcar comentários potencialmente problemáticos;
-  * alimentar um dashboard para o Vendedor;
-  * auxiliar na priorização de atendimento.
-
-A decisão de resposta, ação comercial ou qualquer medida sobre o cliente **é humana**.
-
-### 7.2. Possíveis vieses
-
-O modelo reflete o que vê no dataset. Logo:
-
-* Se o dataset contiver:
-
-  * predominância de um tipo de produto (ex.: tecnologia) → pode funcionar pior em outros domínios (ex.: serviços de saúde).
-  * certa forma de escrever (região, faixa etária) → pode ter mais dificuldade em textos muito diferentes disso.
-
-Por isso é importante:
-
-* documentar bem as fontes dos dados;
-* atualizar o modelo periodicamente com exemplos mais diversos;
-* não usar este modelo para decisões sensíveis sobre pessoas.
-
-### 7.3. Transparência para o usuário final
-
-* O Comprador não recebe o “rótulo de sentimento” explicitamente; para ele, o sistema apenas confirma “comentário recebido”.
-* O uso do modelo é **interno**, voltado para análise do Vendedor e da empresa.
-
-Se, no futuro, o sistema passar a expor o rótulo ao cliente, é importante:
-
-* deixar claro que se trata de análise automática;
-* explicar que podem ocorrer erros.
+A distinção "Comprador não vê o rótulo" (ADR-002) é uma decisão de produto de uma arquitetura de backend diferente da que está em `main`. Na API pública desta implementação (`POST /api/v1/sentiment`), quem chama o endpoint recebe a classificação diretamente na resposta HTTP — não há papel de usuário que a oculte.
 
 ---
 
-## 8. Integração com o Hackathon One Sentiment API
+## 8. Reprodutibilidade
 
-### 8.1. Interface do microserviço de ML
+1. `datascience/Hackathon_One_Nb1.ipynb` — carrega `hopi_hari (1).csv`, aplica `limpar_texto()`, aplica a regra de binarização, salva `dataset_sentimento_limpo.csv`.
+2. `datascience/Hackathon_One_Nb2.ipynb` — carrega o CSV limpo, treina `TfidfVectorizer` + `LogisticRegression`, salva `tfidf_vectorizer.pkl` e `sentiment_model.pkl`.
+3. `datascience/build_pipeline.py` — combina os dois num `sklearn.Pipeline`, salva `ds-service/models/sentiment.joblib`. Requer scikit-learn 1.6.1 no ambiente que roda o script (mesma versão do treino).
+4. Reiniciar o `ds-service` (ou o container) para carregar o novo artefato.
 
-Contrato sugerido (a ser documentado em `docs/contrato-api-ml.md`):
-
-**Requisição:**
-
-```http
-POST /predict
-Content-Type: application/json
-```
-
-```json
-{
-  "text": "Exemplo de comentário em português."
-}
-```
-
-**Resposta:**
-
-```json
-{
-  "label": "NEGATIVE",
-  "probability": 0.82,
-  "model_name": "hackathon-one-sentiment-ptbr",
-  "model_version": "v1"
-}
-```
-
-### 8.2. Mapeamento para o backend Java
-
-* `label` → enum `Sentimento` (POSITIVE/NEGATIVE/NEUTRO)
-* `probability` → campo `probabilidade` em `resultado_analise`
-* `model_name`/`model_version` → utilizados para:
-
-  * identificar/registrar `modelo_ml`;
-  * rastrear qual versão do modelo gerou cada resultado.
-
-A API Java:
-
-1. recebe o texto de comentário;
-2. chama o ML (`POST /predict`);
-3. converte `label` para `Sentimento`;
-4. grava em `resultado_analise`;
-5. decide se `eh_critico` deve ser `TRUE` (ex.: NEGATIVO + prob alta);
-6. se crítico → cria `notificacao` associada.
+`datascience/Hackathon_One_Nb3.ipynb` é um experimento histórico (tentativa de classificação ternária com Neutro, descartada por restrição de tempo do hackathon — ver `datascience/README_DS.md` e ADR-004). Não faz parte do pipeline de produção.
 
 ---
 
-## 9. Versionamento e manutenção
+## 9. Checklist de qualidade do modelo
 
-### 9.1. Convenção de versão
+Antes de trocar o artefato em produção:
 
-Sugestão:
-
-* `v1`, `v2`, `v3`… (simples, incremental)
-  ou
-* `v1.0.0`, `v1.1.0`, seguindo semântica de versão.
-
-Cada versão do modelo deve:
-
-* ter um arquivo `.pkl` com nome coerente (ex.: `sentiment_model_v2.pkl`);
-* ter um registro correspondente na tabela `modelo_ml`:
-
-  * `nome` = `hackathon-one-sentiment-ptbr`
-  * `versao` = `v2`
-  * `f1_score`, `acuracia` atualizados
-  * `ativo` = `TRUE` (somente para a versão atualmente em produção)
-
-### 9.2. Atualização do modelo em produção
-
-Passos recomendados:
-
-1. Treinar nova versão (ex.: `v2`) com dataset atualizado.
-2. Avaliar e comparar métricas com a versão anterior.
-3. Registrar nova versão em `modelo_ml` (com `ativo = FALSE` inicialmente).
-4. Atualizar o arquivo `.pkl` no ambiente do ML service.
-5. Fazer deploy de forma controlada (por exemplo, em ambiente de teste).
-6. Quando validado:
-
-   * marcar `ativo = FALSE` para a versão antiga;
-   * marcar `ativo = TRUE` para a nova.
-7. Documentar a mudança em:
-
-   * `modelo_ml` (campos de métricas);
-   * `CHANGELOG.md` (se mantido);
-   * opcionalmente, um ADR específico (decisão de troca de modelo).
-
----
-
-## 10. Reprodutibilidade
-
-Para reproduzir o treinamento do modelo:
-
-1. Abrir o notebook em `datascience/ml_notebooks/sentiment_model.ipynb`.
-2. Baixar/carregar o dataset necessário (ou reutilizar o existente em `datascience/data/`).
-3. Executar as células de:
-
-   * carregamento de dados;
-   * pré-processamento;
-   * divisão em `TRAIN/VALID/TEST`;
-   * treino e tuning da Regressão Logística;
-   * avaliação (com métricas).
-4. Atualizar qualquer parâmetro necessário.
-5. Executar a célula de exportação (`joblib.dump`).
-6. Substituir o arquivo em `datascience/ml_service/model/` (com cuidado para não quebrar a produção).
-7. Atualizar o registro em `modelo_ml` no banco.
-
----
-
-## 11. Checklist de qualidade do modelo
-
-Antes de colocar uma nova versão do modelo em produção, verificar:
-
-* [ ] Dataset documentado (fonte, tamanho, split).
-* [ ] Notebook com:
-
-  * [ ] EDA mínima (verificação de classes, balanceamento, exemplos).
-  * [ ] Treino com pipeline claro (TF-IDF + Logistic Regression).
-  * [ ] Métricas em teste registradas.
-* [ ] `modelo_ml` atualizado no banco (nome, versão, métricas).
-* [ ] Arquivo `.pkl` presente e carregando sem erro no ML service.
-* [ ] Contrato `/predict` testado (com exemplos positivos/negativos/neutros).
-* [ ] Integração com backend testada (comentário → resultado_analise → notificacao).
-* [ ] Documentação deste `ml-model-card.md` atualizada (especialmente métricas e versão).
+- [ ] Artefato gerado por `datascience/build_pipeline.py`, carregando sem `InconsistentVersionWarning` na versão de scikit-learn pinada em `ds-service/requirements.txt`.
+- [ ] `sha256sum` do artefato registrado (é o `model_version` que aparecerá em `/health`).
+- [ ] Teste manual com pelo menos um texto claramente positivo e um claramente negativo, confirmando probabilidade variável (não os valores fixos do fallback, 0.75/0.85).
+- [ ] `/health` do `ds-service` reportando `mode: "model"`.
+- [ ] Se as métricas de avaliação foram recalculadas, atualizar a §5.2 com os valores e a data.

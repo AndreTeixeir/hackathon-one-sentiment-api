@@ -89,7 +89,7 @@ Content-Type: application/json
   "resultados": [
     {"texto": "Produto excelente!", "previsao": "Positivo", "probabilidade": 0.95},
     {"texto": "Péssima experiência", "previsao": "Negativo", "probabilidade": 0.88},
-    {"texto": "Produto normal", "previsao": "Neutro", "probabilidade": 0.65}
+    {"texto": "Produto normal", "previsao": "Positivo", "probabilidade": 0.61}
   ],
   "tempo_total_ms": 150
 }
@@ -105,12 +105,10 @@ GET /api/v1/stats
 ```json
 {
   "total_analises": 100,
-  "positivos": 60,
+  "positivos": 70,
   "negativos": 30,
-  "neutros": 10,
-  "percentual_positivos": 60.0,
+  "percentual_positivos": 70.0,
   "percentual_negativos": 30.0,
-  "percentual_neutros": 10.0,
   "probabilidade_media_positivos": 0.89,
   "probabilidade_media_negativos": 0.85,
   "tempo_medio_processamento_ms": 45.5
@@ -129,23 +127,33 @@ GET /api/v1/health
   "status": "UP",
   "service": "sentiment-backend",
   "dependencies": {
-    "ds-service": "UP"
+    "ds-service": {
+      "status": "UP",
+      "mode": "model",
+      "model_loaded": true,
+      "model_version": "e658513705ca048b2664fd3a4e7585f15ea611b3c05c3938e9c4eb17012d6c1e",
+      "fallback_reason": null
+    }
   }
 }
 ```
+
+`mode` é `"model"` quando o ds-service está classificando com o modelo real, ou `"fallback"` quando caiu no heurístico de palavras-chave (arquivo do modelo ausente ou corrompido) — nesse caso `fallback_reason` traz o motivo.
 
 ## 🧪 Testes
 
 ### Executar todos os testes
 
 ```bash
-./mvnw test
+mvn test
 ```
+
+> Esta branch não tem `mvnw`/`mvnw.cmd` gerados apesar do `.mvn/wrapper/maven-wrapper.properties` presente — `./mvnw` falha. Usar `mvn` instalado na máquina.
 
 ### Executar com cobertura
 
 ```bash
-./mvnw test jacoco:report
+mvn test jacoco:report
 ```
 
 ## 🐳 Docker

@@ -15,7 +15,7 @@ O objetivo principal foi aplicar, de forma prática, os conhecimentos adquiridos
 
 A solução de Data Science consiste em:
 
-* Exploração e preparação de um dataset de avaliações textuais;
+* Exploração e preparação de um dataset de **4.044 avaliações do parque de diversões Hopi Hari** (`hopi_hari (1).csv`) — não é um dataset de e-commerce ou redes sociais;
 * Construção de modelos de classificação de sentimentos utilizando **TF-IDF + Regressão Logística**;
 * Avaliação comparativa entre abordagens **binária** e **ternária**;
 * Serialização do modelo final para integração com o backend via API.
@@ -115,6 +115,8 @@ A escolha pelo modelo de **Regressão Logística Binária** foi motivada por:
 * Facilidade de interpretação e integração com o backend.
 
 O modelo ternário foi explorado como estudo complementar, mas apresentou limitações relacionadas à classe neutra, comum em problemas de análise de sentimentos com modelos lineares e datasets de tamanho moderado.
+
+📌 **Reforço (ADR-004):** a API pública expõe hoje exatamente **duas classes** — `Positivo` e `Negativo`. Não é uma limitação temporária a ser corrigida depois; é a decisão registrada aqui, sustentada pela avaliação do modelo ternário. Vale registrar também uma limitação medida do modelo binário em produção: ele é **sensível a acentuação** — o vocabulário TF-IDF contém tokens acentuados, e remover acentos do texto de entrada degrada a classificação (ex.: "péssimo" classifica corretamente, "pessimo" não). Não normalizar acentos só na inferência — pioraria o resultado, já que o vocabulário treinado tem acentos.
 
 ---
 

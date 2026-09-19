@@ -37,7 +37,7 @@ public class SentimentController {
     @PostMapping("/sentiment")
     @Operation(
             summary = "Analisar sentimento de um texto",
-            description = "Recebe um texto e retorna a classificação de sentimento (Positivo/Negativo/Neutro) com a probabilidade associada"
+            description = "Recebe um texto e retorna a classificação de sentimento (Positivo/Negativo) com a probabilidade associada"
     )
     @ApiResponses(value = {
             @ApiResponse(

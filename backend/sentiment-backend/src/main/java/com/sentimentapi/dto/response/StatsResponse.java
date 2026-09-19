@@ -24,17 +24,11 @@ public class StatsResponse {
     @JsonProperty("negativos")
     private Long negativos;
 
-    @JsonProperty("neutros")
-    private Long neutros;
-
     @JsonProperty("percentual_positivos")
     private Double percentualPositivos;
 
     @JsonProperty("percentual_negativos")
     private Double percentualNegativos;
-
-    @JsonProperty("percentual_neutros")
-    private Double percentualNeutros;
 
     @JsonProperty("probabilidade_media_positivos")
     private Double probabilidadeMediaPositivos;

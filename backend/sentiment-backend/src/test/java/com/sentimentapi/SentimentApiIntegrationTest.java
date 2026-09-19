@@ -7,6 +7,7 @@ import com.sentimentapi.dto.response.BatchSentimentResponse;
 import com.sentimentapi.dto.response.SentimentResponse;
 import com.sentimentapi.dto.response.StatsResponse;
 import com.sentimentapi.service.DsServiceClient;
+import com.sentimentapi.dto.DsServiceHealth;
 import com.sentimentapi.dto.DsServiceResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,12 +21,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -84,21 +87,24 @@ class SentimentApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("Batch processing: múltiplos textos")
+    @DisplayName("Batch processing: múltiplos textos, incluindo rótulo desconhecido do DS Service")
     void batchProcessingMultiplosTextos() throws Exception {
-        // Mock do DS Service para diferentes respostas
+        // Mock do DS Service para diferentes respostas. O terceiro item simula
+        // um rótulo que o DS Service pode devolver mas que Sentimento.fromLabel
+        // não reconhece — antes da remoção do Neutro, isso virava "Neutro" em
+        // silêncio (default do enum); agora deve aparecer como erro visível.
         when(dsServiceClient.predict("Excelente produto!"))
                 .thenReturn(new DsServiceResponse("Positivo", 0.95));
         when(dsServiceClient.predict("Produto ruim, não recomendo"))
                 .thenReturn(new DsServiceResponse("Negativo", 0.88));
-        when(dsServiceClient.predict("Produto normal, nada demais"))
-                .thenReturn(new DsServiceResponse("Neutro", 0.65));
+        when(dsServiceClient.predict("Produto com rótulo desconhecido"))
+                .thenReturn(new DsServiceResponse("Desconhecido", 0.50));
 
         BatchSentimentRequest batchRequest = BatchSentimentRequest.builder()
                 .texts(List.of(
                         new SentimentRequest("Excelente produto!"),
                         new SentimentRequest("Produto ruim, não recomendo"),
-                        new SentimentRequest("Produto normal, nada demais")
+                        new SentimentRequest("Produto com rótulo desconhecido")
                 ))
                 .build();
 
@@ -116,14 +122,37 @@ class SentimentApiIntegrationTest {
         assertThat(response.getTotal()).isEqualTo(3);
         assertThat(response.getBatchId()).isNotNull();
         assertThat(response.getResultados()).hasSize(3);
+
+        List<BatchSentimentResponse.BatchItemResponse> resultados = response.getResultados();
+        assertThat(resultados.get(0).getPrevisao()).isEqualTo("Positivo");
+        assertThat(resultados.get(0).getProbabilidade()).isEqualTo(0.95);
+        assertThat(resultados.get(1).getPrevisao()).isEqualTo("Negativo");
+        assertThat(resultados.get(1).getProbabilidade()).isEqualTo(0.88);
+        assertThat(resultados.get(2).getPrevisao()).isEqualTo("ERRO");
+        assertThat(resultados.get(2).getProbabilidade()).isEqualTo(0.0);
     }
 
     @Test
-    @DisplayName("Health check deve retornar status UP")
+    @DisplayName("Health check deve retornar status UP e propagar o modo do DS Service")
     void healthCheckDeveRetornarStatusUp() throws Exception {
-        when(dsServiceClient.isHealthy()).thenReturn(true);
+        when(dsServiceClient.getHealth()).thenReturn(Optional.of(
+                new DsServiceHealth("ok", "model", true, "abc123", null, List.of("Negativo", "Positivo"))
+        ));
 
         mockMvc.perform(get("/api/v1/health"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dependencies['ds-service'].status").value("UP"))
+                .andExpect(jsonPath("$.dependencies['ds-service'].mode").value("model"))
+                .andExpect(jsonPath("$.dependencies['ds-service'].model_loaded").value(true));
+    }
+
+    @Test
+    @DisplayName("Health check deve reportar DS Service indisponível quando ele não responde")
+    void healthCheckDeveReportarDsServiceIndisponivel() throws Exception {
+        when(dsServiceClient.getHealth()).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dependencies['ds-service'].status").value("DOWN"));
     }
 }

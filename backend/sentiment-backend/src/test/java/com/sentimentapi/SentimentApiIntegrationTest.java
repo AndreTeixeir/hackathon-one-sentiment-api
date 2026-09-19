@@ -87,6 +87,24 @@ class SentimentApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("Deve retornar 503 quando o DS Service devolve rótulo de sentimento desconhecido")
+    void deveRetornar503ParaRotuloDesconhecido() throws Exception {
+        // Rótulo fora do vocabulário que Sentimento.fromLabel reconhece — é uma
+        // violação de contrato do DS Service, não um erro interno do backend,
+        // então a resposta esperada é 503 (Serviço Indisponível), não 500.
+        when(dsServiceClient.predict(anyString()))
+                .thenReturn(new DsServiceResponse("Desconhecido", 0.5));
+
+        SentimentRequest request = new SentimentRequest("Texto qualquer, suficientemente longo");
+
+        mockMvc.perform(post("/api/v1/sentiment")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error").value("Serviço Indisponível"));
+    }
+
+    @Test
     @DisplayName("Batch processing: múltiplos textos, incluindo rótulo desconhecido do DS Service")
     void batchProcessingMultiplosTextos() throws Exception {
         // Mock do DS Service para diferentes respostas. O terceiro item simula

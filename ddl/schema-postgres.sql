@@ -61,7 +61,7 @@ CREATE TABLE modelo_ml (
 
 CREATE TABLE resultado_analise (
                                    id            BIGSERIAL PRIMARY KEY,
-                                   sentimento    VARCHAR(20)  NOT NULL,           -- POSITIVO / NEGATIVO / NEUTRO
+                                   sentimento    VARCHAR(20)  NOT NULL,           -- POSITIVO / NEGATIVO (modelo binário, ver ADR-004)
                                    probabilidade NUMERIC(3,2) NOT NULL,           -- 0.00 a 1.00
                                    eh_critico    BOOLEAN      NOT NULL DEFAULT FALSE,
                                    data_analise  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -76,7 +76,7 @@ CREATE TABLE resultado_analise (
                                        FOREIGN KEY (modelo_id) REFERENCES modelo_ml(id)
                                            ON DELETE SET NULL,
                                    CONSTRAINT ck_resultado_sentimento
-                                       CHECK (sentimento IN ('POSITIVO', 'NEGATIVO', 'NEUTRO')),
+                                       CHECK (sentimento IN ('POSITIVO', 'NEGATIVO')),
                                    CONSTRAINT ck_resultado_probabilidade
                                        CHECK (probabilidade >= 0.0 AND probabilidade <= 1.0)
 );
@@ -108,7 +108,7 @@ CREATE TABLE dataset_registro (
                                   id              BIGSERIAL PRIMARY KEY,
                                   texto           TEXT         NOT NULL,
                                   nota            SMALLINT,
-                                  rotulo_original VARCHAR(20)  NOT NULL,  -- POS / NEG / NEU
+                                  rotulo_original VARCHAR(20)  NOT NULL,  -- POS / NEG (modelo binário, ver ADR-004)
                                   fonte           VARCHAR(100) NOT NULL,
                                   split           VARCHAR(10)  NOT NULL,  -- TRAIN / TEST / VALID
                                   data_importacao TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -122,11 +122,6 @@
             border: 1px solid #f5c6cb;
         }
 
-        .result.neutro {
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
-        }
-
         .result h3 {
             font-size: 1.5rem;
             margin-bottom: 10px;
@@ -139,6 +134,7 @@
 
         .stats-grid {
             display: grid;
+            /* Isso garante que os 3 itens ocupem espaços iguais */
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
         }
@@ -222,11 +218,18 @@
             text-align: center;
             color: white;
             margin-top: 30px;
+            padding-bottom: 20px;
             opacity: 0.8;
         }
 
         footer a {
             color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -248,7 +251,6 @@
                 <span style="color: #666; font-size: 0.9rem;">Exemplos:</span>
                 <button class="example-btn" onclick="setExample('positivo')">😊 Positivo</button>
                 <button class="example-btn" onclick="setExample('negativo')">😠 Negativo</button>
-                <button class="example-btn" onclick="setExample('neutro')">😐 Neutro</button>
             </div>
             <br>
             <button class="btn" onclick="analisar()">Analisar Sentimento</button>
@@ -281,10 +283,6 @@
                     <div class="number" id="negativos" style="color: #dc3545;">-</div>
                     <div class="label">Negativos</div>
                 </div>
-                <div class="stat-item">
-                    <div class="number" id="neutros" style="color: #ffc107;">-</div>
-                    <div class="label">Neutros</div>
-                </div>
             </div>
         </div>
 
@@ -305,14 +303,14 @@
             </div>
             <br>
             <p style="color: #666; font-size: 0.9rem;">
-                📚 Documentação completa: <a href="/swagger-ui.html" target="_blank">Swagger UI</a>
+                📚 Documentação completa: <a href="/swagger-ui.html" target="_blank" style="color: #667eea;">Swagger UI</a>
             </p>
         </div>
 
         <footer>
-            <p>Hackathon One - Sentiment API | 
-               <a href="/swagger-ui.html">Swagger</a> | 
-               <a href="/actuator/health">Health Check</a>
+            <p>Hackathon One - Sentiment API |
+               <a href="/swagger-ui.html" target="_blank">Swagger</a> |
+               <a href="/actuator/health" target="_blank">Health Check</a>
             </p>
         </footer>
     </div>
@@ -322,8 +320,7 @@
 
         const exemplos = {
             positivo: "Atendimento excelente, resolveu meu problema rapidamente! Recomendo a todos.",
-            negativo: "Demorou muito e veio com defeito. Péssima experiência, não comprem!",
-            neutro: "Recebi o produto. Ainda vou testar melhor para dar uma opinião."
+            negativo: "Demorou muito e veio com defeito. Péssima experiência, não comprem!"
         };
 
         function setExample(tipo) {
@@ -362,8 +359,7 @@
                 const previsaoEl = document.getElementById('previsao');
                 const probEl = document.getElementById('probabilidade');
                 
-                const emoji = data.previsao === 'Positivo' ? '😊' : 
-                              data.previsao === 'Negativo' ? '😠' : '😐';
+                const emoji = data.previsao === 'Positivo' ? '😊' : '😠';
                 
                 previsaoEl.textContent = `${emoji} ${data.previsao}`;
                 probEl.textContent = `Probabilidade: ${(data.probabilidade * 100).toFixed(1)}%`;
@@ -389,7 +385,6 @@
                 document.getElementById('total').textContent = data.total_analises || 0;
                 document.getElementById('positivos').textContent = data.positivos || 0;
                 document.getElementById('negativos').textContent = data.negativos || 0;
-                document.getElementById('neutros').textContent = data.neutros || 0;
 
             } catch (error) {
                 console.error('Erro ao carregar estatísticas:', error);

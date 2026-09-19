@@ -23,6 +23,11 @@ env/
 # ===== Jupyter =====
 .ipynb_checkpoints/
 
+# ===== Variáveis de ambiente =====
+# .env.example é versionado (é o template); .env real, com valores para a
+# VM, nunca deve ser commitado.
+.env
+
 # ===== Model artifacts =====
 # Decisão (ver ADR-004): versionar os artefatos do modelo. São pequenos
 # (~55 KB) e sem isso um clone limpo não sobe com o modelo real.

@@ -1,5 +1,7 @@
 # Sentiment API - Hackathon One 🚀
 
+[![CI](https://github.com/AndreTeixeir/hackathon-one-sentiment-api/actions/workflows/ci.yml/badge.svg)](https://github.com/AndreTeixeir/hackathon-one-sentiment-api/actions/workflows/ci.yml)
+
 API para análise de sentimentos em textos utilizando Machine Learning, desenvolvida para a etapa final do Hackathon One.
 
 ## 📋 Visão Geral

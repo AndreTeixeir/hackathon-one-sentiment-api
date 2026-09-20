@@ -9,6 +9,12 @@ jobs:
   backend:
     name: Backend (Java / Maven)
     runs-on: ubuntu-latest
+    # mvn test inclui SentimentE2ETest (Testcontainers: Postgres real + imagem
+    # do ds-service buildada do Dockerfile do repositório, sem mock). Runners
+    # ubuntu-latest já têm Docker disponível — nenhum setup extra necessário.
+    # Timeout maior porque a primeira execução builda a imagem do zero
+    # (instala scikit-learn etc.) sem cache de camadas entre runs.
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: backend/sentiment-backend

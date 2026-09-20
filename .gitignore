@@ -23,6 +23,13 @@ env/
 # ===== Jupyter =====
 .ipynb_checkpoints/
 
+# ===== Node / Playwright (e2e/) =====
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
 # ===== Variáveis de ambiente =====
 # .env.example é versionado (é o template); .env real, com valores para a
 # VM, nunca deve ser commitado.

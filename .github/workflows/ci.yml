@@ -138,17 +138,21 @@ jobs:
       # (GHSA-qqhq-8r2c-c3f5) e recomenda nvdApiKeyEnvironmentVariable para
       # builds de CI. -DnvdApiKey tem precedência sobre esse parâmetro, por
       # isso não pode ficar no comando junto com o novo.
-      # continue-on-error e -DfailBuildOnCVSS=11 (acima do máximo de 10, nunca
-      # falha por severidade) seguem a política atual: reporta, não bloqueia.
+      # -DfailBuildOnCVSS=11 (acima do máximo de 10) é quem garante a política
+      # "reporta, não bloqueia" para achado de vulnerabilidade — de propósito,
+      # não muda aqui. Sem continue-on-error: se a ferramenta quebrar (não
+      # achado, e sim falha de execução — NVD/OSS Index fora do ar, etc.), o
+      # job fica vermelho. -DossIndexWarnOnlyOnRemoteErrors=true trata erro
+      # remoto do OSS Index como warning, não como falha do goal inteiro.
       - name: OWASP Dependency-Check (dependências Java)
         working-directory: backend/sentiment-backend
-        continue-on-error: true
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           mvn org.owasp:dependency-check-maven:12.1.0:check \
             -DfailBuildOnCVSS=11 \
-            -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
+            -DnvdApiKeyEnvironmentVariable=NVD_API_KEY \
+            -DossIndexWarnOnlyOnRemoteErrors=true
 
       - name: Publicar relatório do Dependency-Check
         if: always()

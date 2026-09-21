@@ -131,21 +131,24 @@ jobs:
           java-version: "17"
           cache: maven
 
-      # Sem NVD_API_KEY, a atualização da base da NVD pode levar horas (o
-      # próprio plugin avisa isso — confirmado localmente: "NVD API has
-      # ~395 mil registros ... pode levar MUITO tempo sem API Key"). Gerar
-      # a chave em https://nvd.nist.gov/developers/request-an-api-key e
-      # configurá-la como secret NVD_API_KEY é decisão do André — enquanto
-      # isso não acontecer, este passo roda mesmo assim (nunca falha o
-      # build, -DfailBuildOnCVSS=11 é acima do máximo possível de 10) mas
-      # pode ser lento ou não conseguir atualizar a base na primeira vez.
+      # NVD_API_KEY já está configurada como secret do repositório. A chave é
+      # passada via variável de ambiente + nvdApiKeyEnvironmentVariable, não
+      # via -DnvdApiKey: a documentação oficial do plugin desaconselha
+      # -DnvdApiKey porque o debug log do Maven pode expor a chave
+      # (GHSA-qqhq-8r2c-c3f5) e recomenda nvdApiKeyEnvironmentVariable para
+      # builds de CI. -DnvdApiKey tem precedência sobre esse parâmetro, por
+      # isso não pode ficar no comando junto com o novo.
+      # continue-on-error e -DfailBuildOnCVSS=11 (acima do máximo de 10, nunca
+      # falha por severidade) seguem a política atual: reporta, não bloqueia.
       - name: OWASP Dependency-Check (dependências Java)
         working-directory: backend/sentiment-backend
         continue-on-error: true
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           mvn org.owasp:dependency-check-maven:12.1.0:check \
             -DfailBuildOnCVSS=11 \
-            -DnvdApiKey="${{ secrets.NVD_API_KEY }}"
+            -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
 
       - name: Publicar relatório do Dependency-Check
         if: always()

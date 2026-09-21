@@ -161,18 +161,31 @@ jobs:
           docker build -t sentiment-backend:scan ./backend/sentiment-backend
           docker build -t ds-service:scan ./ds-service
 
+      # aquasecurity/trivy-action@0.24.0 quebrou na resolução da action (a tag
+      # real é v0.24.0, com "v" — o pin aqui estava sem o "v" desde o início).
+      # Trocado por docker run direto: mesma ferramenta, versão pinada (não
+      # "latest") para não repetir essa classe de problema, sem depender de
+      # uma action de terceiro ser resolvida corretamente pelo GitHub.
       - name: Trivy — imagem do backend
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          image-ref: sentiment-backend:scan
-          format: table
-          severity: HIGH,CRITICAL
-          exit-code: "0"
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ghcr.io/aquasecurity/trivy:0.74.0 image \
+            --image-src docker \
+            --format table \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            --timeout 15m \
+            sentiment-backend:scan
 
       - name: Trivy — imagem do ds-service
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          image-ref: ds-service:scan
-          format: table
-          severity: HIGH,CRITICAL
-          exit-code: "0"
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ghcr.io/aquasecurity/trivy:0.74.0 image \
+            --image-src docker \
+            --format table \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            --timeout 15m \
+            ds-service:scan

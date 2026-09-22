@@ -141,9 +141,15 @@ jobs:
       # -DfailBuildOnCVSS=11 (acima do máximo de 10) é quem garante a política
       # "reporta, não bloqueia" para achado de vulnerabilidade — de propósito,
       # não muda aqui. Sem continue-on-error: se a ferramenta quebrar (não
-      # achado, e sim falha de execução — NVD/OSS Index fora do ar, etc.), o
-      # job fica vermelho. -DossIndexWarnOnlyOnRemoteErrors=true trata erro
-      # remoto do OSS Index como warning, não como falha do goal inteiro.
+      # achado, e sim falha de execução), o job fica vermelho.
+      # OSS Index Analyzer desligado (-DossIndexAnalyzerEnabled=false): o
+      # plano gratuito da Sonatype Guide dá cota de créditos/mês, e ao
+      # esgotar volta a dar 401 — o mesmo erro que já derrubou o goal aqui
+      # (ver etapa 5g). ossIndexWarnOnlyOnRemoteErrors=true só suprimia o
+      # erro na análise por dependência; uma segunda chamada, depois da
+      # análise, continuava derrubando o build. NVD + Trivy cobrem o
+      # essencial e já convergiram de forma independente numa CVE real
+      # (tomcat-embed-core / CVE-2025-24813).
       - name: OWASP Dependency-Check (dependências Java)
         working-directory: backend/sentiment-backend
         env:
@@ -152,7 +158,7 @@ jobs:
           mvn org.owasp:dependency-check-maven:12.1.0:check \
             -DfailBuildOnCVSS=11 \
             -DnvdApiKeyEnvironmentVariable=NVD_API_KEY \
-            -DossIndexWarnOnlyOnRemoteErrors=true
+            -DossIndexAnalyzerEnabled=false
 
       - name: Publicar relatório do Dependency-Check
         if: always()

@@ -170,6 +170,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Build das imagens Docker para escanear (mesmos Dockerfiles de produção)
+        if: always()
         run: |
           docker build -t sentiment-backend:scan ./backend/sentiment-backend
           docker build -t ds-service:scan ./ds-service
@@ -179,7 +180,12 @@ jobs:
       # Trocado por docker run direto: mesma ferramenta, versão pinada (não
       # "latest") para não repetir essa classe de problema, sem depender de
       # uma action de terceiro ser resolvida corretamente pelo GitHub.
+      # if: always() nos três passos abaixo: sem isso, uma falha do
+      # Dependency-Check (passo anterior) pula o Trivy inteiro por padrão do
+      # GitHub Actions — visto na etapa 5g. O job segue vermelho se o
+      # Dependency-Check quebrar; só o Trivy deixa de depender disso.
       - name: Trivy — imagem do backend
+        if: always()
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
@@ -192,6 +198,7 @@ jobs:
             sentiment-backend:scan
 
       - name: Trivy — imagem do ds-service
+        if: always()
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \

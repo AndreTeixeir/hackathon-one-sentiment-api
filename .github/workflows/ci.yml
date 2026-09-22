@@ -150,12 +150,17 @@ jobs:
       # análise, continuava derrubando o build. NVD + Trivy cobrem o
       # essencial e já convergiram de forma independente numa CVE real
       # (tomcat-embed-core / CVE-2025-24813).
+      # Plugin pinado em 13.0.0 (era 12.1.0): a 12.1.0 ignorava
+      # -DossIndexAnalyzerEnabled em silêncio (property não existe nessa
+      # versão, Maven descarta -D desconhecido sem avisar — etapa 5h). A
+      # 13.0.0 documenta o parâmetro e, segundo a doc oficial, desativa o
+      # analisador OSS Index sozinha quando não há credenciais configuradas.
       - name: OWASP Dependency-Check (dependências Java)
         working-directory: backend/sentiment-backend
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
-          mvn org.owasp:dependency-check-maven:12.1.0:check \
+          mvn org.owasp:dependency-check-maven:13.0.0:check \
             -DfailBuildOnCVSS=11 \
             -DnvdApiKeyEnvironmentVariable=NVD_API_KEY \
             -DossIndexAnalyzerEnabled=false

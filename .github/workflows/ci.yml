@@ -118,61 +118,44 @@ jobs:
           echo "=== ds-service ==="; cat /tmp/ds-service.log || true
 
   security-scan:
-    name: Segurança (OWASP Dependency-Check + Trivy) — reporta, não bloqueia o build
+    name: Segurança (OSV-Scanner + Trivy) — reporta, não bloqueia o build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: maven
-
-      # NVD_API_KEY já está configurada como secret do repositório. A chave é
-      # passada via variável de ambiente + nvdApiKeyEnvironmentVariable, não
-      # via -DnvdApiKey: a documentação oficial do plugin desaconselha
-      # -DnvdApiKey porque o debug log do Maven pode expor a chave
-      # (GHSA-qqhq-8r2c-c3f5) e recomenda nvdApiKeyEnvironmentVariable para
-      # builds de CI. -DnvdApiKey tem precedência sobre esse parâmetro, por
-      # isso não pode ficar no comando junto com o novo.
-      # -DfailBuildOnCVSS=11 (acima do máximo de 10) é quem garante a política
-      # "reporta, não bloqueia" para achado de vulnerabilidade — de propósito,
-      # não muda aqui. Sem continue-on-error: se a ferramenta quebrar (não
-      # achado, e sim falha de execução), o job fica vermelho.
-      # OSS Index Analyzer desligado (-DossIndexAnalyzerEnabled=false): o
-      # plano gratuito da Sonatype Guide dá cota de créditos/mês, e ao
-      # esgotar volta a dar 401 — o mesmo erro que já derrubou o goal aqui
-      # (ver etapa 5g). ossIndexWarnOnlyOnRemoteErrors=true só suprimia o
-      # erro na análise por dependência; uma segunda chamada, depois da
-      # análise, continuava derrubando o build. NVD + Trivy cobrem o
-      # essencial e já convergiram de forma independente numa CVE real
-      # (tomcat-embed-core / CVE-2025-24813).
-      # Plugin pinado em 13.0.0 (era 12.1.0): a 12.1.0 ignorava
-      # -DossIndexAnalyzerEnabled em silêncio (property não existe nessa
-      # versão, Maven descarta -D desconhecido sem avisar — etapa 5h). A
-      # 13.0.0 documenta o parâmetro e, segundo a doc oficial, desativa o
-      # analisador OSS Index sozinha quando não há credenciais configuradas.
-      - name: OWASP Dependency-Check (dependências Java)
-        working-directory: backend/sentiment-backend
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+      # osv-scanner v2.6.0, binário oficial baixado direto do GitHub Releases —
+      # não a action google/osv-scanner-action nem "latest": mesma decisão do
+      # Trivy (docker run pinado em vez de action de terceiro) — tag mutável
+      # de action foi o vetor do comprometimento do trivy-action em março/2026
+      # (GHSA-69fq-xp46-6x23, 76 de 77 tags sofreram force-push).
+      #
+      # Guarda por TEXTO, não por exit code nem contagem de pacotes (v2.6.0):
+      # com a rede indisponível, o osv-scanner reporta "Total 0 packages
+      # affected by 0 known vulnerabilities" e a contagem "found N packages"
+      # aparece ANTES dos erros — nem a saída "zerada" nem a contagem inicial
+      # distinguem "sem vulnerabilidade" de "não conseguiu varrer". As três
+      # strings abaixo apareceram de forma reproduzível na falha real (rede
+      # bloqueada, testado localmente em 23/09). Se o binário for atualizado,
+      # reverificar se essas strings ainda aparecem numa falha real antes de
+      # confiar na guarda.
+      - name: OSV-Scanner
         run: |
-          mvn org.owasp:dependency-check-maven:13.0.0:check \
-            -DfailBuildOnCVSS=11 \
-            -DnvdApiKeyEnvironmentVariable=NVD_API_KEY \
-            -DossIndexAnalyzerEnabled=false
-
-      - name: Publicar relatório do Dependency-Check
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dependency-check-report
-          path: backend/sentiment-backend/target/dependency-check-report.html
-          retention-days: 30
-          if-no-files-found: ignore
+          curl -sS -L -o osv-scanner \
+            https://github.com/google/osv-scanner/releases/download/v2.6.0/osv-scanner_linux_amd64
+          chmod +x osv-scanner
+          set +e
+          ./osv-scanner \
+            --lockfile=backend/sentiment-backend/pom.xml \
+            --lockfile=ds-service/requirements.txt \
+            | tee osv-scanner-output.txt
+          EXIT_CODE=$?
+          set -e
+          if grep -qE 'failed resolution|Error during extraction|max retries exceeded' osv-scanner-output.txt; then
+            echo "::error::OSV-Scanner não completou a varredura (erro de rede/resolução) — ver saída acima. Isto reprova o job; achado de vulnerabilidade não reprova (ver EXIT_CODE=$EXIT_CODE)."
+            exit 1
+          fi
+          exit 0
 
       - name: Build das imagens Docker para escanear (mesmos Dockerfiles de produção)
         if: always()
@@ -185,10 +168,11 @@ jobs:
       # Trocado por docker run direto: mesma ferramenta, versão pinada (não
       # "latest") para não repetir essa classe de problema, sem depender de
       # uma action de terceiro ser resolvida corretamente pelo GitHub.
-      # if: always() nos três passos abaixo: sem isso, uma falha do
-      # Dependency-Check (passo anterior) pula o Trivy inteiro por padrão do
-      # GitHub Actions — visto na etapa 5g. O job segue vermelho se o
-      # Dependency-Check quebrar; só o Trivy deixa de depender disso.
+      # if: always() nos três passos abaixo: sem isso, uma falha do passo
+      # anterior (hoje o OSV-Scanner; era o Dependency-Check) pula o Trivy
+      # inteiro por padrão do GitHub Actions — visto na etapa 5g. O job segue
+      # vermelho se o passo anterior quebrar; só o Trivy deixa de depender
+      # disso.
       - name: Trivy — imagem do backend
         if: always()
         run: |

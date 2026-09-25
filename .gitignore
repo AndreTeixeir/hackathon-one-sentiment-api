@@ -23,8 +23,21 @@ env/
 # ===== Jupyter =====
 .ipynb_checkpoints/
 
-# ===== Model artifacts (decida depois) =====
-# Para hackathon, pode ser útil versionar o modelo.
-# Se você quiser versionar, REMOVA as 2 linhas abaixo.
-*.joblib
-*.pkl
+# ===== Node / Playwright (e2e/) =====
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# ===== Variáveis de ambiente =====
+# .env.example é versionado (é o template); .env real, com valores para a
+# VM, nunca deve ser commitado.
+.env
+
+# ===== Model artifacts =====
+# Decisão (ver ADR-004): versionar os artefatos do modelo. São pequenos
+# (~55 KB) e sem isso um clone limpo não sobe com o modelo real.
+
+# Documento de trabalho da revisão técnica, não faz parte do projeto
+HANDOFF-claude-code.md

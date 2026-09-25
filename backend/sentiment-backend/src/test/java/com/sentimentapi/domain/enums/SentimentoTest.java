@@ -6,6 +6,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Testes para o enum Sentimento.
@@ -39,11 +40,14 @@ class SentimentoTest {
     }
 
     @Test
-    @DisplayName("Deve retornar NEUTRO para labels desconhecidos")
-    void deveRetornarNeutroParaLabelsDesconhecidos() {
-        assertThat(Sentimento.fromLabel("unknown")).isEqualTo(Sentimento.NEUTRO);
-        assertThat(Sentimento.fromLabel("")).isEqualTo(Sentimento.NEUTRO);
-        assertThat(Sentimento.fromLabel(null)).isEqualTo(Sentimento.NEUTRO);
+    @DisplayName("Deve lançar exceção para labels desconhecidos, nulos ou vazios")
+    void deveLancarExcecaoParaLabelsDesconhecidos() {
+        assertThatThrownBy(() -> Sentimento.fromLabel("unknown"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Sentimento.fromLabel(""))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Sentimento.fromLabel(null))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -51,6 +55,5 @@ class SentimentoTest {
     void deveRetornarLabelCorreto() {
         assertThat(Sentimento.POSITIVO.getLabel()).isEqualTo("Positivo");
         assertThat(Sentimento.NEGATIVO.getLabel()).isEqualTo("Negativo");
-        assertThat(Sentimento.NEUTRO.getLabel()).isEqualTo("Neutro");
     }
 }

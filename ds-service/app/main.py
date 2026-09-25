@@ -17,7 +17,14 @@ def on_startup() -> None:
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "mode": model.mode,
+        "model_loaded": model.model_loaded,
+        "model_version": model.model_version,
+        "fallback_reason": model.fallback_reason,
+        "classes": ["Negativo", "Positivo"],
+    }
 
 
 @app.post("/predict", response_model=PredictResponse)

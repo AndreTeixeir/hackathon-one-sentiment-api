@@ -7,6 +7,7 @@ import com.sentimentapi.dto.request.BatchSentimentRequest;
 import com.sentimentapi.dto.request.SentimentRequest;
 import com.sentimentapi.dto.response.BatchSentimentResponse;
 import com.sentimentapi.dto.response.SentimentResponse;
+import com.sentimentapi.exception.DsServiceException;
 import com.sentimentapi.repository.AnaliseResultadoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,8 +59,16 @@ public class SentimentService {
 
         long processingTime = System.currentTimeMillis() - startTime;
 
-        // Converte o label para o enum
-        Sentimento sentimento = Sentimento.fromLabel(dsResponse.getLabel());
+        // Converte o label para o enum. Um rótulo não reconhecido é uma
+        // violação de contrato do DS Service (não um erro interno nosso) —
+        // reempacotado como DsServiceException para responder 503, não 500.
+        Sentimento sentimento;
+        try {
+            sentimento = Sentimento.fromLabel(dsResponse.getLabel());
+        } catch (IllegalArgumentException e) {
+            throw new DsServiceException(
+                    "DS Service devolveu um rótulo de sentimento não reconhecido: " + e.getMessage(), e);
+        }
 
         // Persiste o resultado
         AnaliseResultado resultado = AnaliseResultado.builder()

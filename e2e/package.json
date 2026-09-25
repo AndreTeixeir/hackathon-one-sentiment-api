@@ -1,0 +1,12 @@
+{
+  "name": "hackathon-one-sentiment-api-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "E2E de frontend (Playwright) contra a página servida pelo Spring Boot em backend/sentiment-backend/src/main/resources/static/index.html",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}

@@ -30,10 +30,8 @@ public class StatsService {
                     .totalAnalises(0L)
                     .positivos(0L)
                     .negativos(0L)
-                    .neutros(0L)
                     .percentualPositivos(0.0)
                     .percentualNegativos(0.0)
-                    .percentualNeutros(0.0)
                     .probabilidadeMediaPositivos(0.0)
                     .probabilidadeMediaNegativos(0.0)
                     .tempoMedioProcessamentoMs(0.0)
@@ -42,7 +40,6 @@ public class StatsService {
 
         long positivos = analiseRepository.countBySentimento(Sentimento.POSITIVO);
         long negativos = analiseRepository.countBySentimento(Sentimento.NEGATIVO);
-        long neutros = analiseRepository.countBySentimento(Sentimento.NEUTRO);
 
         Double avgProbPositivos = analiseRepository.findAverageProbabilidadeBySentimento(Sentimento.POSITIVO);
         Double avgProbNegativos = analiseRepository.findAverageProbabilidadeBySentimento(Sentimento.NEGATIVO);
@@ -52,10 +49,8 @@ public class StatsService {
                 .totalAnalises(total)
                 .positivos(positivos)
                 .negativos(negativos)
-                .neutros(neutros)
                 .percentualPositivos(calcularPercentual(positivos, total))
                 .percentualNegativos(calcularPercentual(negativos, total))
-                .percentualNeutros(calcularPercentual(neutros, total))
                 .probabilidadeMediaPositivos(avgProbPositivos != null ? avgProbPositivos : 0.0)
                 .probabilidadeMediaNegativos(avgProbNegativos != null ? avgProbNegativos : 0.0)
                 .tempoMedioProcessamentoMs(avgTempo != null ? avgTempo : 0.0)

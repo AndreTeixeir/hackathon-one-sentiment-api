@@ -25,7 +25,8 @@ docs/
 ├── adr/                     # Architecture Decision Records (decisões arquiteturais)
 │   ├── ADR-001-microservico-ml.md
 │   ├── ADR-002-comprador-sem-sentimento.md
-│   └── ADR-003-estrutura-repositorio.md
+│   ├── ADR-003-estrutura-repositorio.md
+│   └── ADR-004-modelo-treinado-e-contrato-binario.md
 └── uml/                     # Diagramas em PlantUML
     ├── 01-diagrama-de-arquitetura-c4.puml
     ├── 02-diagrama-de-er-banco.puml

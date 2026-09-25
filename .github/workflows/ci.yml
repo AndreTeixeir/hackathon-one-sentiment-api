@@ -1,0 +1,200 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (Java / Maven)
+    runs-on: ubuntu-latest
+    # mvn test inclui SentimentE2ETest (Testcontainers: Postgres real + imagem
+    # do ds-service buildada do Dockerfile do repositório, sem mock). Runners
+    # ubuntu-latest já têm Docker disponível — nenhum setup extra necessário.
+    # Timeout maior porque a primeira execução builda a imagem do zero
+    # (instala scikit-learn etc.) sem cache de camadas entre runs.
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend/sentiment-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run tests
+        run: mvn test -B
+
+      - name: Publish test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-surefire-reports
+          path: backend/sentiment-backend/target/surefire-reports
+          retention-days: 7
+
+  ds-service:
+    name: DS Service (Python / pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ds-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ds-service/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest -v
+
+  e2e-frontend:
+    name: E2E Frontend (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências do ds-service e subir em background
+        working-directory: ds-service
+        run: |
+          pip install -r requirements.txt
+          nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/ds-service.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:8000/health && break; sleep 2; done
+
+      - name: Subir o backend em background
+        working-directory: backend/sentiment-backend
+        run: |
+          nohup mvn spring-boot:run > /tmp/backend.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:8080/api/v1/health && break; sleep 3; done
+
+      - name: Instalar dependências do Node e o Chromium do Playwright
+        working-directory: e2e
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+
+      - name: Rodar os testes Playwright
+        working-directory: e2e
+        run: npx playwright test
+
+      - name: Publicar relatório do Playwright em caso de falha
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 7
+
+      - name: Logs dos serviços (em caso de falha)
+        if: failure()
+        run: |
+          echo "=== backend ==="; cat /tmp/backend.log || true
+          echo "=== ds-service ==="; cat /tmp/ds-service.log || true
+
+  security-scan:
+    name: Segurança (OSV-Scanner + Trivy) — reporta, não bloqueia o build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # osv-scanner v2.6.0, binário oficial baixado direto do GitHub Releases —
+      # não a action google/osv-scanner-action nem "latest": mesma decisão do
+      # Trivy (docker run pinado em vez de action de terceiro) — tag mutável
+      # de action foi o vetor do comprometimento do trivy-action em março/2026
+      # (GHSA-69fq-xp46-6x23, 76 de 77 tags sofreram force-push).
+      #
+      # Guarda por TEXTO, não por exit code nem contagem de pacotes (v2.6.0):
+      # com a rede indisponível, o osv-scanner reporta "Total 0 packages
+      # affected by 0 known vulnerabilities" e a contagem "found N packages"
+      # aparece ANTES dos erros — nem a saída "zerada" nem a contagem inicial
+      # distinguem "sem vulnerabilidade" de "não conseguiu varrer". As três
+      # strings abaixo apareceram de forma reproduzível na falha real (rede
+      # bloqueada, testado localmente em 23/09). Se o binário for atualizado,
+      # reverificar se essas strings ainda aparecem numa falha real antes de
+      # confiar na guarda.
+      - name: OSV-Scanner
+        run: |
+          curl -sS -L -o osv-scanner \
+            https://github.com/google/osv-scanner/releases/download/v2.6.0/osv-scanner_linux_amd64
+          chmod +x osv-scanner
+          set +e
+          ./osv-scanner \
+            --lockfile=backend/sentiment-backend/pom.xml \
+            --lockfile=ds-service/requirements.txt \
+            | tee osv-scanner-output.txt
+          EXIT_CODE=$?
+          set -e
+          if grep -qE 'failed resolution|Error during extraction|max retries exceeded' osv-scanner-output.txt; then
+            echo "::error::OSV-Scanner não completou a varredura (erro de rede/resolução) — ver saída acima. Isto reprova o job; achado de vulnerabilidade não reprova (ver EXIT_CODE=$EXIT_CODE)."
+            exit 1
+          fi
+          exit 0
+
+      - name: Build das imagens Docker para escanear (mesmos Dockerfiles de produção)
+        if: always()
+        run: |
+          docker build -t sentiment-backend:scan ./backend/sentiment-backend
+          docker build -t ds-service:scan ./ds-service
+
+      # aquasecurity/trivy-action@0.24.0 quebrou na resolução da action (a tag
+      # real é v0.24.0, com "v" — o pin aqui estava sem o "v" desde o início).
+      # Trocado por docker run direto: mesma ferramenta, versão pinada (não
+      # "latest") para não repetir essa classe de problema, sem depender de
+      # uma action de terceiro ser resolvida corretamente pelo GitHub.
+      # if: always() nos três passos abaixo: sem isso, uma falha do passo
+      # anterior (hoje o OSV-Scanner; era o Dependency-Check) pula o Trivy
+      # inteiro por padrão do GitHub Actions — visto na etapa 5g. O job segue
+      # vermelho se o passo anterior quebrar; só o Trivy deixa de depender
+      # disso.
+      - name: Trivy — imagem do backend
+        if: always()
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ghcr.io/aquasecurity/trivy:0.74.0 image \
+            --image-src docker \
+            --format table \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            --timeout 15m \
+            sentiment-backend:scan
+
+      - name: Trivy — imagem do ds-service
+        if: always()
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ghcr.io/aquasecurity/trivy:0.74.0 image \
+            --image-src docker \
+            --format table \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            --timeout 15m \
+            ds-service:scan

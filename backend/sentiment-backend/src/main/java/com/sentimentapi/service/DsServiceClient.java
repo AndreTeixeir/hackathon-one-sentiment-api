@@ -1,5 +1,6 @@
 package com.sentimentapi.service;
 
+import com.sentimentapi.dto.DsServiceHealth;
 import com.sentimentapi.dto.DsServiceResponse;
 import com.sentimentapi.exception.DsServiceException;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Cliente para comunicação com o microserviço de Data Science (FastAPI).
@@ -68,19 +70,23 @@ public class DsServiceClient {
     }
 
     /**
-     * Verifica se o DS Service está disponível.
+     * Consulta o /health do DS Service, incluindo o modo de operação
+     * (modelo real ou fallback heurístico).
      *
-     * @return true se o serviço está saudável
+     * @return o health do DS Service, ou vazio se o serviço não respondeu
      */
-    public boolean isHealthy() {
+    public Optional<DsServiceHealth> getHealth() {
         String url = dsServiceUrl + "/health";
 
         try {
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-            return response.getStatusCode().is2xxSuccessful();
+            ResponseEntity<DsServiceHealth> response = restTemplate.getForEntity(url, DsServiceHealth.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return Optional.of(response.getBody());
+            }
+            return Optional.empty();
         } catch (Exception e) {
             log.warn("DS Service não está disponível: {}", e.getMessage());
-            return false;
+            return Optional.empty();
         }
     }
 }

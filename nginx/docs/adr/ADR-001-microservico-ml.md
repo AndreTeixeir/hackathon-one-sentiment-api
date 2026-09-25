@@ -2,7 +2,7 @@
 **Projeto:** Hackathon One Sentiment API  
 **Versão do documento:** 1.0  
 **Data:** 28/12/2025
-**Status:** Aprovado  
+**Status:** Aprovado — parcialmente superado pelo ADR-004 quanto ao enum de sentimento (este ADR previa 3 classes; o modelo é binário, ver ADR-004). A decisão de usar um microserviço Python permanece válida.  
 **Escopo:** Integração entre back-end Java (Spring Boot) e modelo de Machine Learning (Python)
 
 ---

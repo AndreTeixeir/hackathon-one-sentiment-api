@@ -19,7 +19,43 @@
 
     <properties>
         <java.version>17</java.version>
+        <testcontainers.version>2.0.5</testcontainers.version>
+        <!-- spring-boot-starter-parent 3.2.0 fixa tomcat.version=10.1.16 e
+             postgresql.version=42.6.0. Sobrescritas por CVE:
+             - tomcat: GHSA-x4m4-345f-5h5g (CVE-2025-24813, CVSS 9.8) e outras
+               exigem >= 10.1.58, a maior fixed version entre as encontradas
+               pelo OSV-Scanner (governa tomcat-embed-core e
+               tomcat-embed-websocket, mesma property nos dois). 10.1.58 não
+               existe no Maven Central (pulada, 10.1.57 -> 10.1.59) — usada
+               10.1.60, a mais recente da série 10.1.x publicada.
+             - postgresql: GHSA-24rp-q3w6-vc56 (CVSS 10.0) exige >= 42.6.1;
+               GHSA-98qh-xjc8-98pq exige >= 42.7.11; GHSA-j92g-9f8w-j867
+               (CVSS 8.2, publicada no banco do OSV entre os scans de 22/09
+               e 23/09) exige >= 42.7.12, a maior das três. -->
+        <tomcat.version>10.1.60</tomcat.version>
+        <postgresql.version>42.7.12</postgresql.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- spring-boot-starter-parent fixa commons-lang3 em 3.13.0; o
+                 commons-compress usado por testcontainers (build de imagem a
+                 partir de Dockerfile) exige >= 3.18.0 (NoSuchMethodError em
+                 SystemProperties.getUserName sem isto). -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.18.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -74,6 +110,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- E2E: Postgres real e ds-service real via Docker, sem mock -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

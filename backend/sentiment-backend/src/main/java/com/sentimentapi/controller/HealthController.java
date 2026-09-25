@@ -1,5 +1,6 @@
 package com.sentimentapi.controller;
 
+import com.sentimentapi.dto.DsServiceHealth;
 import com.sentimentapi.service.DsServiceClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Controller para verificação de saúde da aplicação.
@@ -36,10 +38,33 @@ public class HealthController {
         health.put("status", "UP");
         health.put("service", "sentiment-backend");
 
-        Map<String, String> dependencies = new HashMap<>();
-        dependencies.put("ds-service", dsServiceClient.isHealthy() ? "UP" : "DOWN");
+        Map<String, Object> dependencies = new HashMap<>();
+        dependencies.put("ds-service", buildDsServiceStatus());
         health.put("dependencies", dependencies);
 
         return ResponseEntity.ok(health);
+    }
+
+    /**
+     * Propaga o modo de operação do DS Service (modelo real ou fallback
+     * heurístico) para quem consulta /api/v1/health — sem isso não há como
+     * saber de fora se a API está classificando de verdade.
+     */
+    private Map<String, Object> buildDsServiceStatus() {
+        Optional<DsServiceHealth> dsHealth = dsServiceClient.getHealth();
+        Map<String, Object> status = new HashMap<>();
+
+        if (dsHealth.isEmpty()) {
+            status.put("status", "DOWN");
+            return status;
+        }
+
+        DsServiceHealth h = dsHealth.get();
+        status.put("status", "UP");
+        status.put("mode", h.getMode());
+        status.put("model_loaded", h.getModelLoaded());
+        status.put("model_version", h.getModelVersion());
+        status.put("fallback_reason", h.getFallbackReason());
+        return status;
     }
 }

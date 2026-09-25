@@ -29,9 +29,11 @@
                existe no Maven Central (pulada, 10.1.57 -> 10.1.59) — usada
                10.1.60, a mais recente da série 10.1.x publicada.
              - postgresql: GHSA-24rp-q3w6-vc56 (CVSS 10.0) exige >= 42.6.1;
-               GHSA-98qh-xjc8-98pq exige >= 42.7.11, a maior das duas. -->
+               GHSA-98qh-xjc8-98pq exige >= 42.7.11; GHSA-j92g-9f8w-j867
+               (CVSS 8.2, publicada no banco do OSV entre os scans de 22/09
+               e 23/09) exige >= 42.7.12, a maior das três. -->
         <tomcat.version>10.1.60</tomcat.version>
-        <postgresql.version>42.7.11</postgresql.version>
+        <postgresql.version>42.7.12</postgresql.version>
     </properties>
 
     <dependencyManagement>

@@ -1,0 +1,12 @@
+fastapi==0.128.0
+uvicorn[standard]==0.40.0
+joblib==1.5.1
+scikit-learn==1.6.1
+
+# Pisos de dependências transitivas motivados por CVE (mesmo espírito das
+# sobrescritas do BOM no pom.xml do backend). Garantem a versão segura
+# independentemente do dia em que o lockfile for regerado. Antes deles, a
+# imagem real já saía segura (confirmado pelo Trivy), mas por acaso do
+# momento do build, não por declaração.
+anyio>=4.14.2   # GHSA-82r6-8w77-94w6, CVSS 9.3 (Critical)
+h11>=0.16.0     # PYSEC-2026-348, CVSS 9.1 (Critical)

@@ -10,14 +10,14 @@
 
 ## 1. Contexto
 
-A API rodava apenas em `http://152.67.61.11:8080` — IP direto, sem TLS. Isso bloqueia recursos que exigem contexto seguro no navegador (o "Try it out" do Swagger UI, por exemplo, sofre de mixed content ao rodar numa página HTTPS contra um backend HTTP) e não é uma URL apresentável para portfólio.
+A API rodava apenas em `http://152.67.61.11:8080` — IP direto, sem TLS: o navegador marca a página como "Não seguro", e uma URL com IP e porta não é apresentável para portfólio.
 
 Restrições do ambiente:
 
 - O domínio `andreteixeira.dev.br` já existe no Registro.br, com DNS gerenciado lá mesmo.
 - A VM de produção deste projeto (`sentiment-api-server`, `VM.Standard.E2.1.Micro`) tem 1 GB de RAM e já opera com swap — pouca folga para rodar um proxy TLS (Caddy/Nginx) e gerenciar certificados localmente.
 - O limite de VMs gratuitas da conta OCI já está esgotado — não é possível provisionar uma VM nova só para isso.
-- Existe outra VM na mesma conta, `rag-multiempresa` ("oci-rag", do projeto SabIA), Ubuntu 24.04 ARM64, 2 OCPU / 12 GB, com folga de memória (~8% em uso) e já rodando Caddy como serviço systemd para outros subdomínios.
+- Existe outra VM na mesma conta, `rag-multiempresa` ("oci-rag", do projeto SabIA), Ubuntu 24.04 ARM64, 2 OCPU / 12 GB, com folga de memória (~8% em uso) e já rodando Caddy como serviço systemd para o domínio principal (`andreteixeira.dev.br` e `www`).
 
 ## 2. Problema
 
@@ -39,10 +39,10 @@ Como publicar a API sob HTTPS e um domínio próprio sem:
   }
   ```
 
-- Certificado emitido automaticamente pelo Caddy via Let's Encrypt, desafio **TLS-ALPN-01** (não exige abrir a porta 80 na VM do sentiment, nem qualquer mudança nela), com renovação automática.
+- Certificado emitido automaticamente pelo Caddy via Let's Encrypt, desafio **TLS-ALPN-01** na porta 443 da própria `oci-rag` — a VM do sentiment não participa da emissão do certificado, com renovação automática.
 - A VM do sentiment não teve nenhuma mudança de infraestrutura: o Caddy da `oci-rag` termina o TLS e repassa a requisição em HTTP puro, pela rede pública, para `152.67.61.11:8080`.
 - O acesso direto `http://152.67.61.11:8080` foi mantido ativo por decisão do André (ver §6).
-- Ajuste necessário no backend (Spring Boot), registrado no compose e não no `application-prod.yml` para não exigir rebuild de imagem na VM de 1 GB: `SERVER_FORWARDHEADERSSTRATEGY=framework`, para que o springdoc gere `servers[0].url` a partir dos cabeçalhos `X-Forwarded-Proto`/`X-Forwarded-Host` enviados pelo Caddy, em vez do protocolo/host da conexão interna (HTTP, IP direto).
+- Ajuste necessário no backend (Spring Boot), registrado no compose e não no `application-prod.yml` para não exigir rebuild de imagem na VM de 1 GB: `SERVER_FORWARDHEADERSSTRATEGY=framework`, para que o springdoc gere `servers[0].url` a partir dos cabeçalhos `X-Forwarded-Proto`/`X-Forwarded-Host` enviados pelo Caddy, em vez do protocolo/host da conexão interna (HTTP, IP direto) — sem esse ajuste, o Swagger UI servido via HTTPS sofre de mixed content ao usar o "Try it out" contra uma URL declarada como `http://`.
 
 Testado: `https://sentiment.andreteixeira.dev.br/api/v1/health` responde 200 com `mode: model`; página estática e análise de sentimento funcionando através do domínio.
 
@@ -52,7 +52,7 @@ Testado: `https://sentiment.andreteixeira.dev.br/api/v1/health` responde 200 com
 
 **Descrição:** adicionar um serviço Caddy ou Nginx ao compose do próprio projeto, rodando na VM de 1 GB.
 
-**Rejeitada:** a VM já opera no limite de memória (usa swap). Rodar mais um processo (proxy + renovação de certificado) competiria por RAM com o backend, o `ds-service` e o Postgres. Também exigiria abrir a porta 80 nessa VM para o desafio HTTP-01 do Let's Encrypt (ou TLS-ALPN-01 na própria 8080/443), mudança de infraestrutura maior do que reaproveitar um proxy já existente.
+**Rejeitada:** a VM já opera no limite de memória (usa swap). Rodar mais um processo (proxy + renovação de certificado) competiria por RAM com o backend, o `ds-service` e o Postgres. Também exigiria abrir a porta 80 (para o desafio HTTP-01 do Let's Encrypt) ou a porta 443 (para o desafio TLS-ALPN-01) nessa VM, mudança de infraestrutura maior do que reaproveitar um proxy já existente.
 
 ### 4.2. Cloudflare (proxy/DNS/certificado)
 
@@ -66,9 +66,9 @@ Testado: `https://sentiment.andreteixeira.dev.br/api/v1/health` responde 200 com
 
 **Avaliada para uso futuro, não para este projeto agora:** no plano gratuito do Render, o serviço desliga após 15 minutos sem acesso e leva cerca de 1 minuto para voltar (cold start), e o Postgres gratuito expira em 30 dias (https://render.com/docs/free). Para uma demo de portfólio que precisa responder a qualquer momento, isso é pior do que a VM sempre ativa da OCI. Fica registrado como opção a avaliar para projetos novos, não como substituição do que já está no ar.
 
-### 4.4. Domínio escolhido
+### 4.4. Opção escolhida
 
-**Decisão escolhida (subdomínio + Caddy da `oci-rag`):** zero custo adicional, zero VM nova, zero mudança na VM de produção do projeto além de uma variável de ambiente, reaproveitando um proxy e uma automação de certificado que já existiam e já funcionam para outros subdomínios da mesma conta.
+**Decisão escolhida (subdomínio + Caddy da `oci-rag`):** zero custo adicional, zero VM nova, zero mudança na VM de produção do projeto além de uma variável de ambiente, reaproveitando um proxy e uma automação de certificado que já existiam e já funcionam para o domínio principal da mesma conta.
 
 ## 5. Impactos da decisão
 
@@ -86,7 +86,7 @@ DNS no Registro.br (registro A) e `Caddyfile` da `oci-rag` — nenhum dos dois �
 
 ### 6.1. Acoplamento a outra VM
 
-Se a `oci-rag` cair ou seu Caddy parar, o domínio para de responder — mesmo com a VM do sentiment saudável. O IP direto (`http://152.67.61.11:8080`) segue como caminho alternativo, por decisão explícita do André de mantê-lo público.
+Se a `oci-rag` cair ou seu Caddy parar, o domínio para de responder — mesmo com a VM do sentiment saudável. O domínio também depende de a `oci-rag` manter as portas 80 e 443 liberadas, tanto no firewall da VM (regras gravadas em `/etc/iptables/rules.v4`) quanto na lista de segurança (security list) da OCI. O IP direto (`http://152.67.61.11:8080`) segue como caminho alternativo, por decisão explícita do André de mantê-lo público.
 
 ### 6.2. Tráfego em HTTP na rede pública, entre proxy e backend
 

@@ -6,7 +6,7 @@ API de análise de sentimento em texto: backend **Java 17 / Spring Boot 3.2** in
 
 ## Branch canônica
 
-**`main` é a branch de referência e é a que está implantada em produção** (Oracle Cloud, `http://152.67.61.11:8080`). Todo trabalho parte dela.
+**`main` é a branch de referência e é a que está implantada em produção** (Oracle Cloud, `https://sentiment.andreteixeira.dev.br`). Todo trabalho parte dela.
 
 ⚠️ **Armadilha importante:** este repositório tem seis branches com **três arquiteturas de backend diferentes**, que nunca foram integradas. O pacote Java muda entre elas:
 
@@ -133,6 +133,8 @@ chore: atualiza pin do scikit-learn
 ## Ambiente de produção
 
 Instância OCI (`sentiment-api-server`, Ubuntu 22.04, `VM.Standard.E2.1.Micro`, região `sa-saopaulo-1`), IP público `152.67.61.11`. O link está publicado no README do portfólio — **não derrubar sem plano de retorno**.
+
+**Domínio e HTTPS:** produção responde em `https://sentiment.andreteixeira.dev.br`. O TLS é terminado pelo Caddy de outra VM (`oci-rag`, projeto SabIA), que faz proxy reverso para `152.67.61.11:8080` — configuração fora deste repositório (ver `nginx/docs/adr/ADR-005-dominio-e-https-via-caddy-oci-rag.md`). O acesso direto `http://152.67.61.11:8080` continua respondendo.
 
 **Deploy:** manual, via `scripts/deploy-oci.sh` executado na própria VM, a partir de um clone do repositório em `~/sentiment-api`. O script roda `docker-compose down` seguido de `docker-compose up -d --build`. Não há pipeline automatizado — todo redeploy exige shell na máquina. O script também espera um `.env.example` que não existe no repositório.
 

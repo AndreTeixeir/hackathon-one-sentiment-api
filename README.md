@@ -24,8 +24,8 @@ O projeto está implantado e acessível na Oracle Cloud Infrastructure (OCI).
 
 | Componente | URL |
 | :--- | :--- |
-| **API, Backend & Frontend** | [http://152.67.61.11:8080/](http://152.67.61.11:8080/) |
-| **Documentação da API (Swagger)** | [http://152.67.61.11:8080/swagger-ui.html](http://152.67.61.11:8080/swagger-ui.html) |
+| **API, Backend & Frontend** | [https://sentiment.andreteixeira.dev.br/](https://sentiment.andreteixeira.dev.br/) |
+| **Documentação da API (Swagger)** | [https://sentiment.andreteixeira.dev.br/swagger-ui.html](https://sentiment.andreteixeira.dev.br/swagger-ui.html) |
 
 O frontend é servido pelo próprio Spring Boot (não por um container Nginx separado) — por isso a mesma URL da API.
 

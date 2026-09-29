@@ -53,6 +53,7 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/sentimentdb
       DATABASE_USER: sentiment_user
       DATABASE_PASSWORD: sentiment_pass
+      SERVER_FORWARDHEADERSSTRATEGY: framework
     ports:
       - "8080:8080"
     depends_on:

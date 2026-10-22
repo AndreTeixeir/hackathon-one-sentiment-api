@@ -12,7 +12,7 @@ import com.sentimentapi.repository.AnaliseResultadoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -22,6 +22,13 @@ import java.util.UUID;
 /**
  * Serviço principal para análise de sentimento.
  * Integra com o DS Service e persiste os resultados.
+ * <p>
+ * A chamada ao DS Service é uma espera de rede e roda sem transação aberta,
+ * para não segurar uma conexão do pool enquanto espera. Só a gravação do
+ * resultado roda numa transação curta, aberta explicitamente com o
+ * {@link TransactionTemplate}: um {@code @Transactional} em método chamado de
+ * dentro da própria classe (como {@code analisarBatch} chamando
+ * {@code analisar}) não passa pelo proxy do Spring e não teria efeito.
  */
 @Service
 @RequiredArgsConstructor
@@ -30,6 +37,7 @@ public class SentimentService {
 
     private final DsServiceClient dsServiceClient;
     private final AnaliseResultadoRepository analiseRepository;
+    private final TransactionTemplate transactionTemplate;
 
     /**
      * Analisa o sentimento de um texto.
@@ -37,7 +45,6 @@ public class SentimentService {
      * @param request Requisição com o texto
      * @return Resposta com previsão e probabilidade
      */
-    @Transactional
     public SentimentResponse analisar(SentimentRequest request) {
         return analisar(request, "API", null);
     }
@@ -50,11 +57,10 @@ public class SentimentService {
      * @param batchId ID do batch (se aplicável)
      * @return Resposta com previsão e probabilidade
      */
-    @Transactional
     public SentimentResponse analisar(SentimentRequest request, String origem, String batchId) {
         long startTime = System.currentTimeMillis();
 
-        // Chama o DS Service
+        // Chama o DS Service, sem transação aberta
         DsServiceResponse dsResponse = dsServiceClient.predict(request.getText());
 
         long processingTime = System.currentTimeMillis() - startTime;
@@ -70,7 +76,7 @@ public class SentimentService {
                     "DS Service devolveu um rótulo de sentimento não reconhecido: " + e.getMessage(), e);
         }
 
-        // Persiste o resultado
+        // Persiste o resultado, numa transação curta só para a gravação
         AnaliseResultado resultado = AnaliseResultado.builder()
                 .textoOriginal(request.getText())
                 .sentimento(sentimento)
@@ -81,7 +87,7 @@ public class SentimentService {
                 .batchId(batchId)
                 .build();
 
-        analiseRepository.save(resultado);
+        transactionTemplate.executeWithoutResult(status -> analiseRepository.save(resultado));
 
         log.info("Análise concluída: sentimento={}, probabilidade={}, tempo={}ms",
                 sentimento, dsResponse.getProbability(), processingTime);
@@ -95,11 +101,15 @@ public class SentimentService {
 
     /**
      * Analisa múltiplos textos em lote (batch processing).
+     * <p>
+     * Não há transação única para o lote: cada item é previsto fora de
+     * transação e gravado na sua própria transação curta, então a falha de um
+     * item (no DS Service ou no banco) o marca como {@code ERRO} sem desfazer
+     * os demais.
      *
      * @param request Requisição com lista de textos
      * @return Resposta com resultados de todos os textos
      */
-    @Transactional
     public BatchSentimentResponse analisarBatch(BatchSentimentRequest request) {
         long startTime = System.currentTimeMillis();
         String batchId = UUID.randomUUID().toString();

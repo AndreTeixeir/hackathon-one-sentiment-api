@@ -63,14 +63,14 @@ fi
 
 # Para containers existentes
 log "Parando containers existentes..."
-docker-compose down 2>/dev/null || true
+docker-compose down --remove-orphans 2>/dev/null || true
 
 # Remove imagens antigas (opcional)
 read -p "Deseja remover imagens antigas para rebuild completo? (s/N) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Ss]$ ]]; then
     log "Removendo imagens antigas..."
-    docker-compose down --rmi all 2>/dev/null || true
+    docker-compose down --rmi all --remove-orphans 2>/dev/null || true
 fi
 
 # Build e start dos containers

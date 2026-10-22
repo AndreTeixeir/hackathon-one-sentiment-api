@@ -10,7 +10,7 @@
 
 ## 1. Contexto
 
-Uma revisão técnica (`nginx/docs/revisao-tecnica-2026-09.md`) identificou que o serviço **nunca carregou o modelo de Machine Learning treinado** — operava permanentemente em um fallback heurístico de 7 palavras-chave, com probabilidades fixas (0.75 para "Positivo", 0.85 para "Negativo"), sem que nada no sistema sinalizasse esse estado. Confirmado por execução real, tanto localmente quanto contra a instância de produção na OCI.
+Uma revisão técnica (`docs/revisao-tecnica-2026-09.md`) identificou que o serviço **nunca carregou o modelo de Machine Learning treinado** — operava permanentemente em um fallback heurístico de 7 palavras-chave, com probabilidades fixas (0.75 para "Positivo", 0.85 para "Negativo"), sem que nada no sistema sinalizasse esse estado. Confirmado por execução real, tanto localmente quanto contra a instância de produção na OCI.
 
 **Causa-raiz:** o `.gitignore` do projeto ignorava `*.pkl` e `*.joblib` sob o comentário `"decida depois"` — uma decisão de versionamento nunca tomada. Sem o artefato no controle de versão, nenhuma implantação a partir de um clone limpo jamais teve o modelo disponível.
 

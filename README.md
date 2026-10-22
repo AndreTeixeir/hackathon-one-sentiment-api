@@ -12,9 +12,9 @@ A solução integra um backend em **Java/Spring Boot** com um microserviço de *
 
 ### Sobre o modelo
 
-O classificador é `TF-IDF` + `LogisticRegression` (scikit-learn), treinado com **4.044 avaliações do parque de diversões Hopi Hari** — não é um modelo de e-commerce ou redes sociais, e a acurácia fora desse domínio não foi medida. É **binário**: não existe classe "Neutro" (decisão registrada em `nginx/docs/adr/ADR-004-modelo-treinado-e-contrato-binario.md`). O modelo também é sensível a acentuação — remover acentos do texto de entrada degrada a classificação.
+O classificador é `TF-IDF` + `LogisticRegression` (scikit-learn), treinado com **4.044 avaliações do parque de diversões Hopi Hari** — não é um modelo de e-commerce ou redes sociais, e a acurácia fora desse domínio não foi medida. É **binário**: não existe classe "Neutro" (decisão registrada em `docs/adr/ADR-004-modelo-treinado-e-contrato-binario.md`). O modelo também é sensível a acentuação — remover acentos do texto de entrada degrada a classificação.
 
-Se o artefato do modelo não carregar, o serviço cai num fallback heurístico simples — de propósito, para não derrubar a API — mas isso é **sinalizado explicitamente** em `GET /api/v1/health` (`mode: "model"` ou `"fallback"`), nunca silencioso. Detalhes completos em `nginx/docs/ml-model-card.md`.
+Se o artefato do modelo não carregar, o serviço cai num fallback heurístico simples — de propósito, para não derrubar a API — mas isso é **sinalizado explicitamente** em `GET /api/v1/health` (`mode: "model"` ou `"fallback"`), nunca silencioso. Detalhes completos em `docs/ml-model-card.md`.
 
 ## 🔗 Demonstração Online (Live Demo)
 
@@ -96,7 +96,7 @@ Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máqu
 *   `/backend/sentiment-backend`: Código fonte da API principal em Java/Spring Boot (o frontend estático também mora aqui, em `src/main/resources/static/`).
 *   `/ds-service`: Microserviço Python de Machine Learning (FastAPI).
 *   `/datascience`: Notebooks (Jupyter) de treino do modelo e datasets.
-*   `/nginx/docs`: Documentação técnica detalhada (arquitetura, requisitos, model card, ADRs).
+*   `/docs`: Documentação técnica detalhada (arquitetura, requisitos, model card, ADRs).
 *   `/scripts`: Scripts de automação para deploy na OCI.
 
 ## 👥 A Equipa (Participantes)

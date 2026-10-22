@@ -62,9 +62,9 @@ Adicione as seguintes regras:
 
 | Source CIDR | Protocol | Destination Port | Description |
 |-------------|----------|------------------|-------------|
-| 0.0.0.0/0 | TCP | 80 | HTTP |
-| 0.0.0.0/0 | TCP | 8080 | Backend API |
-| 0.0.0.0/0 | TCP | 8000 | DS Service |
+| 0.0.0.0/0 | TCP | 8080 | Backend (API e frontend) |
+
+Só a 8080 precisa de entrada pública. O `docker-compose.yml` publica o PostgreSQL (5432) e o DS Service (8000) apenas em `127.0.0.1`, então **não abra** essas duas portas. Nenhum container deste projeto escuta na porta 80: o HTTPS do domínio é terminado em outra VM, que repassa para a porta 8080 (ver `docs/adr/ADR-005-dominio-e-https-via-caddy-oci-rag.md`).
 
 ## Passo 4: Conectar via SSH
 
@@ -138,8 +138,11 @@ curl -X POST http://localhost:8080/api/v1/sentiment \
 ## Passo 10: Acessar a Aplicação
 
 Acesse no navegador:
-- Frontend: `http://SEU_IP_PUBLICO`
-- API: `http://SEU_IP_PUBLICO/api/v1/sentiment`
+- Frontend: `http://SEU_IP_PUBLICO:8080`
+- API: `http://SEU_IP_PUBLICO:8080/api/v1/sentiment`
+- Domínio (HTTPS, chega à mesma porta 8080): `https://sentiment.andreteixeira.dev.br`
+
+Para acessar o PostgreSQL ou o DS Service de fora da VM, use um túnel SSH (por exemplo, `ssh -L 5432:127.0.0.1:5432 ubuntu@SEU_IP_PUBLICO`).
 
 ## Comandos Úteis
 
@@ -186,7 +189,7 @@ docker-compose logs postgres
 
 ```bash
 # Verificar processos nas portas
-sudo netstat -tlnp | grep -E '80|8080|8000'
+sudo netstat -tlnp | grep -E '8080|8000|5432'
 
 # Matar processo se necessário
 sudo kill -9 PID

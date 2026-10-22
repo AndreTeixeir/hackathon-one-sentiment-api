@@ -109,13 +109,6 @@ else
     echo -e "  Backend:    ${RED}FALHA${NC}"
 fi
 
-# Verifica Frontend
-if curl -s http://localhost:80 > /dev/null 2>&1; then
-    echo -e "  Frontend:   ${GREEN}OK${NC}"
-else
-    echo -e "  Frontend:   ${RED}FALHA${NC}"
-fi
-
 # Obtém IP público
 PUBLIC_IP=$(curl -s ifconfig.me 2>/dev/null || echo "IP não disponível")
 
@@ -125,9 +118,10 @@ echo "  Deploy concluído!"
 echo "=========================================="
 echo ""
 echo "Acesse a aplicação em:"
-echo "  - Frontend: http://${PUBLIC_IP}"
-echo "  - API:      http://${PUBLIC_IP}/api/v1/sentiment"
-echo "  - Health:   http://${PUBLIC_IP}/actuator/health"
+echo "  - Domínio:  https://sentiment.andreteixeira.dev.br"
+echo "  - Frontend: http://${PUBLIC_IP}:8080"
+echo "  - API:      http://${PUBLIC_IP}:8080/api/v1/sentiment"
+echo "  - Health:   http://${PUBLIC_IP}:8080/actuator/health"
 echo ""
 echo "Para ver logs:"
 echo "  docker-compose logs -f"

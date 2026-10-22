@@ -219,7 +219,7 @@ A OCI Free Tier inclui:
 
 ## Próximos Passos
 
-1. Configurar domínio personalizado
-2. Adicionar certificado SSL (Let's Encrypt)
+1. ~~Configurar domínio personalizado~~ (feito: ver `docs/adr/ADR-005-dominio-e-https-via-caddy-oci-rag.md`)
+2. ~~Adicionar certificado SSL (Let's Encrypt)~~ (feito: ver `docs/adr/ADR-005-dominio-e-https-via-caddy-oci-rag.md`)
 3. Configurar backups automáticos
 4. Implementar CI/CD com GitHub Actions

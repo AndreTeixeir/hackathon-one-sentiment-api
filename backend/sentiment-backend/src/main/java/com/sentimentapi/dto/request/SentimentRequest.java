@@ -17,6 +17,6 @@ import lombok.NoArgsConstructor;
 public class SentimentRequest {
 
     @NotBlank(message = "O campo 'text' é obrigatório")
-    @Size(min = 3, message = "O campo 'text' deve ter pelo menos 3 caracteres")
+    @Size(min = 3, max = 2000, message = "O campo 'text' deve ter entre 3 e 2000 caracteres")
     private String text;
 }

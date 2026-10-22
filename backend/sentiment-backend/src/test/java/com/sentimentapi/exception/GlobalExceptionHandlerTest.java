@@ -129,6 +129,6 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Erro de Validação"))
                 .andExpect(jsonPath("$.message").value("Os dados enviados são inválidos"))
-                .andExpect(jsonPath("$.details[0]").value("O campo 'text' deve ter pelo menos 3 caracteres"));
+                .andExpect(jsonPath("$.details[0]").value("O campo 'text' deve ter entre 3 e 2000 caracteres"));
     }
 }

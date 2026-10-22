@@ -106,24 +106,17 @@ Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máqu
 *   `/docs`: Documentação técnica detalhada (arquitetura, requisitos, model card, ADRs).
 *   `/scripts`: Scripts de automação para deploy na OCI.
 
-## 👥 A Equipa (Participantes)
+## 👥 Equipe
 
-| Participante | LinkedIn |
-| :--- | :--- |
-| **Eiky Oliveira Albuquerque** | [Perfil LinkedIn](https://www.linkedin.com/in/eikyalbuquerque) |
-| **Brena Stephany Chagas Paula** | [Perfil LinkedIn](https://www.linkedin.com/in/brena-stephany) |
-| **Luiz Carlos Tannous Del Nero** | [Perfil LinkedIn](https://www.linkedin.com/in/luiz-carlos-tannous-del-nero-b44166255) |
-| **Letícia de Almeida Ferreira** | [Perfil LinkedIn](http://linkedin.com/in/leticia-de-almeida-ferreira-18086a180) |
-| **André Teixeira** | [Perfil LinkedIn](https://www.linkedin.com/in/andreteixeir) |
+| Participante | Contribuição | LinkedIn |
+| :--- | :--- | :--- |
+| **Eiky Oliveira Albuquerque** | Data Science: treino e serialização do modelo e a primeira API FastAPI, em `datascience/` | [Perfil LinkedIn](https://www.linkedin.com/in/eikyalbuquerque) |
+| **Brena Stephany Chagas Paula** | Data Science, com os notebooks 1 e 2 e a organização dos notebooks e do dataset, e a documentação do projeto | [Perfil LinkedIn](https://www.linkedin.com/in/brena-stephany) |
+| **Luiz Carlos Tannous Del Nero** | arquitetura do projeto | [Perfil LinkedIn](https://www.linkedin.com/in/luiz-carlos-tannous-del-nero-b44166255) |
+| **Letícia de Almeida Ferreira** | Data Science | [Perfil LinkedIn](http://linkedin.com/in/leticia-de-almeida-ferreira-18086a180) |
+| **André Teixeira** | backend Spring Boot, `ds-service` (a API Python que serve o modelo), contratos, CI, deploy na OCI e a correção de setembro de 2026 que pôs o modelo treinado em produção | [Perfil LinkedIn](https://www.linkedin.com/in/andreteixeir) |
 
-## 🤝 Créditos da Equipe
-
-| Pessoa | Contribuição |
-| :--- | :--- |
-| André Teixeira | backend Spring Boot, `ds-service` (a API Python que serve o modelo), contratos, CI, deploy na OCI e, em setembro de 2026, a correção que pôs o modelo treinado em produção |
-| BrenaSt | documentação do projeto (ADRs, arquitetura, requisitos e demais documentos) e organização dos notebooks e do dataset |
-| GuilhermeRafaell | notebooks 1 e 2 de ciência de dados |
-| Eiky Albuquerque | treino e serialização do modelo (`.pkl`) e a primeira API FastAPI, em `datascience/` |
+Os notebooks 1 e 2 da Brena aparecem no histórico do Git com o usuário GuilhermeRafaell, porque foram enviados de outro computador.
 
 ## 📄 Licença
 

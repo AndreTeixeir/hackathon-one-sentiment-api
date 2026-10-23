@@ -38,6 +38,3 @@ playwright/.cache/
 # ===== Model artifacts =====
 # Decisão (ver ADR-004): versionar os artefatos do modelo. São pequenos
 # (~55 KB) e sem isso um clone limpo não sobe com o modelo real.
-
-# Documento de trabalho da revisão técnica, não faz parte do projeto
-HANDOFF-claude-code.md

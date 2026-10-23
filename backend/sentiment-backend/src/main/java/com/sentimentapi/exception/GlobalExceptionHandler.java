@@ -54,9 +54,11 @@ public class GlobalExceptionHandler {
                 .error("Serviço Indisponível")
                 .message("Erro ao comunicar com o serviço de análise de sentimento")
                 .path(request.getRequestURI())
-                .details(List.of(ex.getMessage()))
+                .details(List.of())
                 .build();
 
+        // A mensagem da exceção pode conter o endereço interno do ds-service:
+        // o detalhe fica só no log, nunca na resposta.
         log.error("Erro no DS Service: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
     }
@@ -72,9 +74,10 @@ public class GlobalExceptionHandler {
                 .error("Erro Interno")
                 .message("Ocorreu um erro inesperado no servidor")
                 .path(request.getRequestURI())
-                .details(List.of(ex.getMessage()))
+                .details(List.of())
                 .build();
 
+        // Idem: o detalhe fica só no log.
         log.error("Erro inesperado: {}", ex.getMessage(), ex);
         return ResponseEntity.internalServerError().body(error);
     }

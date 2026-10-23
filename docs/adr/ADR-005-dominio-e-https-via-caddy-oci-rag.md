@@ -80,7 +80,7 @@ DNS no Registro.br (registro A) e `Caddyfile` da `oci-rag` — nenhum dos dois �
 
 - `docker-compose.yml`: variável `SERVER_FORWARDHEADERSSTRATEGY: framework` no serviço `backend`.
 - `README.md`: URLs de demonstração trocadas do IP para o domínio.
-- `CLAUDE.md`: domínio registrado como endereço de produção, com nota de que o IP direto continua respondendo.
+- Documentação de trabalho do projeto: domínio registrado como endereço de produção, com nota de que o IP direto continua respondendo.
 
 ## 6. Consequências (curto e longo prazo)
 

@@ -26,7 +26,9 @@ docs/
 │   ├── ADR-001-microservico-ml.md
 │   ├── ADR-002-comprador-sem-sentimento.md
 │   ├── ADR-003-estrutura-repositorio.md
-│   └── ADR-004-modelo-treinado-e-contrato-binario.md
+│   ├── ADR-004-modelo-treinado-e-contrato-binario.md
+│   ├── ADR-005-dominio-e-https-via-caddy-oci-rag.md
+│   └── ADR-006-cors-restrito-nginx-removido-e-portas-expostas.md
 └── uml/                     # Diagramas em PlantUML
     ├── 01-diagrama-de-arquitetura-c4.puml
     ├── 02-diagrama-de-er-banco.puml

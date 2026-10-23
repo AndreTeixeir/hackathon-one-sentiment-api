@@ -12,9 +12,11 @@ A solução integra um backend em **Java/Spring Boot** com um microserviço de *
 
 ### Sobre o modelo
 
-O classificador é `TF-IDF` + `LogisticRegression` (scikit-learn), treinado com **4.044 avaliações do parque de diversões Hopi Hari** — não é um modelo de e-commerce ou redes sociais, e a acurácia fora desse domínio não foi medida. É **binário**: não existe classe "Neutro" (decisão registrada em `nginx/docs/adr/ADR-004-modelo-treinado-e-contrato-binario.md`). O modelo também é sensível a acentuação — remover acentos do texto de entrada degrada a classificação.
+O classificador é `TF-IDF` + `LogisticRegression` (scikit-learn), treinado com **4.044 avaliações do parque de diversões Hopi Hari** — não é um modelo de e-commerce ou redes sociais, e a acurácia fora desse domínio não foi medida. É **binário**: não existe classe "Neutro" (decisão registrada em `docs/adr/ADR-004-modelo-treinado-e-contrato-binario.md`). O modelo também é sensível a acentuação — remover acentos do texto de entrada degrada a classificação.
 
-Se o artefato do modelo não carregar, o serviço cai num fallback heurístico simples — de propósito, para não derrubar a API — mas isso é **sinalizado explicitamente** em `GET /api/v1/health` (`mode: "model"` ou `"fallback"`), nunca silencioso. Detalhes completos em `nginx/docs/ml-model-card.md`.
+Se o artefato do modelo não carregar, o serviço cai num fallback heurístico simples — de propósito, para não derrubar a API — mas isso é **sinalizado explicitamente** em `GET /api/v1/health` (`mode: "model"` ou `"fallback"`), nunca silencioso. Detalhes completos em `docs/ml-model-card.md`.
+
+**Cadeia do modelo:** os `.pkl` de `datascience/` (`sentiment_model.pkl` e `tfidf_vectorizer.pkl`, saída do treino) → `datascience/build_pipeline.py` → `ds-service/models/sentiment.joblib`, o artefato que o `ds-service` carrega e que roda em produção.
 
 ## 🔗 Demonstração Online (Live Demo)
 
@@ -27,7 +29,7 @@ O projeto está implantado e acessível na Oracle Cloud Infrastructure (OCI).
 | **API, Backend & Frontend** | [https://sentiment.andreteixeira.dev.br/](https://sentiment.andreteixeira.dev.br/) |
 | **Documentação da API (Swagger)** | [https://sentiment.andreteixeira.dev.br/swagger-ui.html](https://sentiment.andreteixeira.dev.br/swagger-ui.html) |
 
-O frontend é servido pelo próprio Spring Boot (não por um container Nginx separado) — por isso a mesma URL da API.
+O frontend é servido pelo próprio Spring Boot, na mesma origem da API — por isso a mesma URL.
 
 ## 📺 Vídeo de Demonstração
 
@@ -91,23 +93,30 @@ Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máqu
 
 > Para a lista completa (incluindo schemas de request/response), consulte a documentação Swagger na URL de demonstração.
 
+## 🔒 Limites e acesso pelo navegador
+
+*   **Tamanho do texto:** o campo `text` aceita de 3 a 2.000 caracteres, no envio simples e em cada item do lote (`/api/v1/sentiment/batch`, até 100 textos por requisição). Fora desse intervalo, a API responde `400`.
+*   **CORS:** chamadas feitas por navegador só são aceitas das origens `https://sentiment.andreteixeira.dev.br` e `http://localhost:8080`, sem credenciais e com os métodos `GET` e `POST`. Outras origens recebem `403`. A lista fica em `app.cors.allowed-origins`, no `application.yml`. Requisições que não vêm de um navegador (por exemplo, `curl`) e as do próprio frontend servido pelo Spring (mesma origem) não são afetadas.
+
 ## 📂 Estrutura do Projeto
 
 *   `/backend/sentiment-backend`: Código fonte da API principal em Java/Spring Boot (o frontend estático também mora aqui, em `src/main/resources/static/`).
 *   `/ds-service`: Microserviço Python de Machine Learning (FastAPI).
 *   `/datascience`: Notebooks (Jupyter) de treino do modelo e datasets.
-*   `/nginx/docs`: Documentação técnica detalhada (arquitetura, requisitos, model card, ADRs).
+*   `/docs`: Documentação técnica detalhada (arquitetura, requisitos, model card, ADRs).
 *   `/scripts`: Scripts de automação para deploy na OCI.
 
-## 👥 A Equipa (Participantes)
+## 👥 Equipe
 
-| Participante | LinkedIn |
-| :--- | :--- |
-| **Eiky Oliveira Albuquerque** | [Perfil LinkedIn](https://www.linkedin.com/in/eikyalbuquerque) |
-| **Brena Stephany Chagas Paula** | [Perfil LinkedIn](https://www.linkedin.com/in/brena-stephany) |
-| **Luiz Carlos Tannous Del Nero** | [Perfil LinkedIn](https://www.linkedin.com/in/luiz-carlos-tannous-del-nero-b44166255) |
-| **Letícia de Almeida Ferreira** | [Perfil LinkedIn](http://linkedin.com/in/leticia-de-almeida-ferreira-18086a180) |
-| **André Teixeira** | [Perfil LinkedIn](https://www.linkedin.com/in/andreteixeir) |
+| Participante | Contribuição | LinkedIn |
+| :--- | :--- | :--- |
+| **Eiky Oliveira Albuquerque** | Data Science: treino e serialização do modelo e a primeira API FastAPI, em `datascience/` | [Perfil LinkedIn](https://www.linkedin.com/in/eikyalbuquerque) |
+| **Brena Stephany Chagas Paula** | Data Science, com os notebooks 1 e 2 e a organização dos notebooks e do dataset, e a documentação do projeto | [Perfil LinkedIn](https://www.linkedin.com/in/brena-stephany) |
+| **Luiz Carlos Tannous Del Nero** | arquitetura do projeto | [Perfil LinkedIn](https://www.linkedin.com/in/luiz-carlos-tannous-del-nero-b44166255) |
+| **Letícia de Almeida Ferreira** | Data Science | [Perfil LinkedIn](http://linkedin.com/in/leticia-de-almeida-ferreira-18086a180) |
+| **André Teixeira** | backend Spring Boot, `ds-service` (a API Python que serve o modelo), contratos, CI, deploy na OCI e a correção de setembro de 2026 que pôs o modelo treinado em produção | [Perfil LinkedIn](https://www.linkedin.com/in/andreteixeir) |
+
+Os notebooks 1 e 2 da Brena aparecem no histórico do Git com o usuário GuilhermeRafaell, porque foram enviados de outro computador.
 
 ## 📄 Licença
 

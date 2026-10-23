@@ -24,6 +24,12 @@ ds:
   service:
     url: ${DS_SERVICE_URL:http://localhost:8000}
 
+# Origens autorizadas a chamar a API a partir de um navegador (CORS),
+# separadas por vírgula. Adicionar uma origem exige novo deploy.
+app:
+  cors:
+    allowed-origins: https://sentiment.andreteixeira.dev.br,http://localhost:8080
+
 # Configuração do Actuator
 management:
   endpoints:

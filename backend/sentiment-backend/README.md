@@ -29,7 +29,7 @@ API REST em Java/Spring Boot para análise de sentimentos, desenvolvida para o H
 
 ```bash
 cd backend/sentiment-backend
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 A aplicação estará disponível em:
@@ -148,13 +148,7 @@ GET /api/v1/health
 mvn test
 ```
 
-> Esta branch não tem `mvnw`/`mvnw.cmd` gerados apesar do `.mvn/wrapper/maven-wrapper.properties` presente — `./mvnw` falha. Usar `mvn` instalado na máquina.
-
-### Executar com cobertura
-
-```bash
-mvn test jacoco:report
-```
+> O repositório não tem os scripts `mvnw` e `mvnw.cmd`, apesar do `.mvn/wrapper/maven-wrapper.properties`. Por isso os comandos deste README usam o `mvn` instalado na máquina.
 
 ## 🐳 Docker
 

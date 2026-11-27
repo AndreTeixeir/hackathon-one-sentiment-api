@@ -100,7 +100,7 @@ Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máqu
 
 ## 🔄 Integração Contínua
 
-O workflow `.github/workflows/ci.yml` roda a cada push e nos pull requests para a `main`, com quatro jobs: `backend` executa `mvn test` com o JDK 17, incluindo um teste ponta a ponta com Postgres e a imagem do `ds-service` via Testcontainers; `ds-service` executa `pytest` com o Python 3.11; `e2e-frontend` sobe o `ds-service` e o backend e roda os testes Playwright de `e2e/` no Chromium; e `security-scan` varre as dependências do `pom.xml` e do `ds-service/requirements.txt` com o OSV-Scanner e as imagens Docker do backend e do `ds-service` com o Trivy (severidades HIGH e CRITICAL). A varredura de segurança informa o resultado e não reprova o pipeline: as vulnerabilidades encontradas ficam no log do job, que só falha se o OSV-Scanner não conseguir concluir a varredura.
+O workflow `.github/workflows/ci.yml` roda a cada push e nos pull requests para a `main`, com quatro jobs: `backend` executa `mvn test` com o JDK 17, incluindo um teste ponta a ponta com Postgres e a imagem do `ds-service` via Testcontainers; `ds-service` executa `pytest` com o Python 3.11; `e2e-frontend` sobe o `ds-service` e o backend e roda os testes Playwright de `e2e/` no Chromium; e `security-scan` varre as dependências do `pom.xml` e do `ds-service/requirements.txt` com o OSV-Scanner e as imagens Docker do backend e do `ds-service` com o Trivy (severidades HIGH e CRITICAL). A varredura de segurança informa o resultado e não reprova o pipeline: as vulnerabilidades encontradas ficam no log do job; o job falha se o OSV-Scanner não conseguir concluir a varredura.
 
 ## 📂 Estrutura do Projeto
 

@@ -41,7 +41,7 @@ Como publicar a API sob HTTPS e um domínio próprio sem:
 
 - Certificado emitido automaticamente pelo Caddy via Let's Encrypt, desafio **TLS-ALPN-01** na porta 443 da própria `oci-rag` — a VM do sentiment não participa da emissão do certificado, com renovação automática.
 - A VM do sentiment não teve nenhuma mudança de infraestrutura: o Caddy da `oci-rag` termina o TLS e repassa a requisição em HTTP puro, pela rede pública, para `152.67.61.11:8080`.
-- O acesso direto `http://152.67.61.11:8080` foi mantido ativo por decisão do André (ver §6).
+- O acesso direto `http://152.67.61.11:8080` foi mantido ativo por decisão de projeto (ver §6).
 - Ajuste necessário no backend (Spring Boot), registrado no compose e não no `application-prod.yml` para não exigir rebuild de imagem na VM de 1 GB: `SERVER_FORWARDHEADERSSTRATEGY=framework`, para que o springdoc gere `servers[0].url` a partir dos cabeçalhos `X-Forwarded-Proto`/`X-Forwarded-Host` enviados pelo Caddy, em vez do protocolo/host da conexão interna (HTTP, IP direto) — sem esse ajuste, o Swagger UI servido via HTTPS sofre de mixed content ao usar o "Try it out" contra uma URL declarada como `http://`.
 
 Testado: `https://sentiment.andreteixeira.dev.br/api/v1/health` responde 200 com `mode: model`; página estática e análise de sentimento funcionando através do domínio.
@@ -86,7 +86,7 @@ DNS no Registro.br (registro A) e `Caddyfile` da `oci-rag` — nenhum dos dois �
 
 ### 6.1. Acoplamento a outra VM
 
-Se a `oci-rag` cair ou seu Caddy parar, o domínio para de responder — mesmo com a VM do sentiment saudável. O domínio também depende de a `oci-rag` manter as portas 80 e 443 liberadas, tanto no firewall da VM (regras gravadas em `/etc/iptables/rules.v4`) quanto na lista de segurança (security list) da OCI. O IP direto (`http://152.67.61.11:8080`) segue como caminho alternativo, por decisão explícita do André de mantê-lo público.
+Se a `oci-rag` cair ou seu Caddy parar, o domínio para de responder — mesmo com a VM do sentiment saudável. O domínio também depende de a `oci-rag` manter as portas 80 e 443 liberadas, tanto no firewall da VM (regras gravadas em `/etc/iptables/rules.v4`) quanto na lista de segurança (security list) da OCI. O IP direto (`http://152.67.61.11:8080`) segue como caminho alternativo, por decisão explícita de projeto de mantê-lo público.
 
 ### 6.2. Tráfego em HTTP na rede pública, entre proxy e backend
 
@@ -98,7 +98,7 @@ Com `forward-headers-strategy: framework`, o Spring confia nos cabeçalhos `X-Fo
 
 ### 6.4. Endurecimento possível, adiado
 
-Restringir a porta 8080 para aceitar apenas o IP da `oci-rag` eliminaria a superfície de forja do item anterior. Adiado por decisão do André de manter o IP direto acessível publicamente (§3).
+Restringir a porta 8080 para aceitar apenas o IP da `oci-rag` eliminaria a superfície de forja do item anterior. Adiado por decisão de projeto de manter o IP direto acessível publicamente (§3).
 
 ## 7. Quando revisitar esta decisão
 

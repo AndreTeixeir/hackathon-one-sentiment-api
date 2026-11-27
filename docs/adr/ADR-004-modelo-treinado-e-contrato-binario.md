@@ -125,3 +125,5 @@ A API passa a classificar com o modelo real (probabilidades variáveis, não mai
 - Se o acesso à VM for restaurado e a auditoria completa (arquivos não expostos por HTTP) revelar drift adicional além do `index.html`.
 - Se o domínio de uso da API se expandir para além de avaliações de parque de diversões — a limitação de domínio (§6.2) deixaria de ser hipotética e passaria a exigir validação real.
 - Se scikit-learn liberar uma versão que quebre compatibilidade com os artefatos serializados em 1.6.1 — exigiria reexportar o `Pipeline`.
+
+**Atualização de 26/11/2026:** os documentos do desenho inicial do hackathon, com as pastas `uml/` e `diagrams/`, estão em `docs/proposta-inicial/`.

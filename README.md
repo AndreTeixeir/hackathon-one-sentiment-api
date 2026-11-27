@@ -44,7 +44,7 @@ Assista ao vídeo de apresentação e demonstração do projeto:
 | Camada | Tecnologias |
 | :--- | :--- |
 | **Backend** | Java 17, Spring Boot 3.2, Spring Data JPA, Lombok |
-| **Data Science** | Python 3.11, FastAPI, Scikit-learn, Pandas |
+| **Data Science** | Python 3.11, FastAPI, Scikit-learn (o Pandas aparece só nos notebooks de treino, em `datascience/`) |
 | **Banco de Dados** | PostgreSQL 15 |
 | **Infraestrutura** | Docker, Docker Compose, Oracle Cloud (OCI) |
 
@@ -79,7 +79,7 @@ Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máqu
     ```
 
 3.  **Acesse os serviços:**
-    *   **API:** `http://localhost:8080/api/v1/sentiment`
+    *   **Página inicial (no navegador):** `http://localhost:8080/`, servida a partir de `backend/sentiment-backend/src/main/resources/static/index.html`
     *   **DS Service Health:** `http://localhost:8000/health`
 
 ## 🔌 Endpoints
@@ -98,12 +98,16 @@ Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máqu
 *   **Tamanho do texto:** o campo `text` aceita de 3 a 2.000 caracteres, no envio simples e em cada item do lote (`/api/v1/sentiment/batch`, até 100 textos por requisição). Fora desse intervalo, a API responde `400`.
 *   **CORS:** chamadas feitas por navegador só são aceitas das origens `https://sentiment.andreteixeira.dev.br` e `http://localhost:8080`, sem credenciais e com os métodos `GET` e `POST`. Outras origens recebem `403`. A lista fica em `app.cors.allowed-origins`, no `application.yml`. Requisições que não vêm de um navegador (por exemplo, `curl`) e as do próprio frontend servido pelo Spring (mesma origem) não são afetadas.
 
+## 🔄 Integração Contínua
+
+O workflow `.github/workflows/ci.yml` roda a cada push e nos pull requests para a `main`, com quatro jobs: `backend` executa `mvn test` com o JDK 17, incluindo um teste ponta a ponta com Postgres e a imagem do `ds-service` via Testcontainers; `ds-service` executa `pytest` com o Python 3.11; `e2e-frontend` sobe o `ds-service` e o backend e roda os testes Playwright de `e2e/` no Chromium; e `security-scan` varre as dependências do `pom.xml` e do `ds-service/requirements.txt` com o OSV-Scanner e as imagens Docker do backend e do `ds-service` com o Trivy (severidades HIGH e CRITICAL). A varredura de segurança informa o resultado e não reprova o pipeline: as vulnerabilidades encontradas ficam no log do job, que só falha se o OSV-Scanner não conseguir concluir a varredura.
+
 ## 📂 Estrutura do Projeto
 
 *   `/backend/sentiment-backend`: Código fonte da API principal em Java/Spring Boot (o frontend estático também mora aqui, em `src/main/resources/static/`).
 *   `/ds-service`: Microserviço Python de Machine Learning (FastAPI).
 *   `/datascience`: Notebooks (Jupyter) de treino do modelo e datasets.
-*   `/docs`: Documentação técnica detalhada (arquitetura, requisitos, model card, ADRs).
+*   `/docs`: Documentação técnica atual (ADRs, model card, deploy e revisão técnica), com o índice em `docs/README-docs.md` e o desenho inicial do hackathon em `docs/proposta-inicial/`.
 *   `/scripts`: Scripts de automação para deploy na OCI.
 
 ## 👥 Equipe
@@ -113,7 +117,7 @@ Certifique-se de ter o **Docker** e o **Docker Compose** instalados em sua máqu
 | **Eiky Oliveira Albuquerque** | Data Science: treino e serialização do modelo e a primeira API FastAPI, em `datascience/` | [Perfil LinkedIn](https://www.linkedin.com/in/eikyalbuquerque) |
 | **Brena Stephany Chagas Paula** | Data Science, com os notebooks 1 e 2 e a organização dos notebooks e do dataset, e a documentação do projeto | [Perfil LinkedIn](https://www.linkedin.com/in/brena-stephany) |
 | **Luiz Carlos Tannous Del Nero** | arquitetura do projeto | [Perfil LinkedIn](https://www.linkedin.com/in/luiz-carlos-tannous-del-nero-b44166255) |
-| **Letícia de Almeida Ferreira** | Data Science | [Perfil LinkedIn](http://linkedin.com/in/leticia-de-almeida-ferreira-18086a180) |
+| **Letícia de Almeida Ferreira** | Data Science | [Perfil LinkedIn](https://linkedin.com/in/leticia-de-almeida-ferreira-18086a180) |
 | **André Teixeira** | backend Spring Boot, `ds-service` (a API Python que serve o modelo), contratos, CI, deploy na OCI e a correção de setembro de 2026 que pôs o modelo treinado em produção | [Perfil LinkedIn](https://www.linkedin.com/in/andreteixeir) |
 
 Os notebooks 1 e 2 da Brena aparecem no histórico do Git com o usuário GuilhermeRafaell, porque foram enviados de outro computador.

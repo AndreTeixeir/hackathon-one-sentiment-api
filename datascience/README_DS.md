@@ -6,7 +6,7 @@ O objetivo principal foi aplicar, de forma prática, os conhecimentos adquiridos
 
 **Equipe de Data Science:**  
 - Brena Stephany: BrenaSt
-- Eyka Albuquerque: eikyalbuquerque
+- Eiky Albuquerque: eikyalbuquerque
 - Leticia
 
 ---
@@ -37,7 +37,7 @@ Responsável pelas etapas iniciais do projeto:
 * Geração do dataset final limpo para modelagem.
 
 📌 **Decisão importante**:
-As avaliações neutras foram removidas no modelo binário para reduzir ambiguidade e melhorar o aprendizado supervisionado.
+O modelo binário não tem classe neutra: as avaliações de nota 3 foram rotuladas como negativas. Em `dataset_sentimento_limpo.csv`, as notas 1 a 3 têm rótulo `0` (negativo) e as notas 4 e 5 têm rótulo `1` (positivo); a nota 3 responde por 927 das 4.044 linhas.
 
 ---
 

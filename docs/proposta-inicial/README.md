@@ -6,7 +6,7 @@ A descrição do sistema real está no [README da raiz](../../README.md), nos [A
 
 ## Caminhos citados nos documentos
 
-Os caminhos citados dentro destes documentos são os da época, como `docs/uml/02-diagrama-de-er-banco.puml`. Hoje esses arquivos ficam em `docs/proposta-inicial/`, como `docs/proposta-inicial/uml/02-diagrama-de-er-banco.puml`.
+Os caminhos citados dentro destes documentos são os da época, no formato `docs/...` (por exemplo, `docs/uml/...`). Hoje esses arquivos ficam em `docs/proposta-inicial/...` (por exemplo, `docs/proposta-inicial/uml/...`).
 
 ## Ajustes posteriores
 

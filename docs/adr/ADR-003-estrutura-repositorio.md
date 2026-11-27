@@ -326,3 +326,5 @@ Essa decisão deve ser revista se:
 * a estrutura atual começar a atrapalhar a automação de CI/CD (por exemplo, se builds parciais por pasta não forem suficientes).
 
 Até lá, o monorepo bem organizado com as pastas definidas acima será a estrutura oficial do Hackathon One Sentiment API.
+
+**Atualização de 26/11/2026:** os documentos do desenho inicial do hackathon, com as pastas `uml/` e `diagrams/`, estão em `docs/proposta-inicial/`.
